@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import TeacherPanel from './TeacherPanel'
+import LoginModal from './LoginModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -171,7 +172,10 @@ export default function App() {
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [showTeacherPanel, setShowTeacherPanel] = useState(false)
-  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || 'student')
+  const [showLogin, setShowLogin] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    localStorage.getItem('teacherAuth') === 'true'
+  )
 
   async function generateCase() {
     setLoading(true)
@@ -255,16 +259,42 @@ export default function App() {
     fetchHistory()
   }, [])
 
-  function toggleRole() {
-    const newRole = userRole === 'student' ? 'teacher' : 'student'
-    setUserRole(newRole)
-    localStorage.setItem('userRole', newRole)
+  function handleLoginSuccess() {
+    setIsAuthenticated(true)
+    localStorage.setItem('teacherAuth', 'true')
+    setShowLogin(false)
+    setShowTeacherPanel(true)
+  }
+
+  function handleLogout() {
+    setIsAuthenticated(false)
+    localStorage.removeItem('teacherAuth')
+    setShowTeacherPanel(false)
+  }
+
+  function attemptOpenPanel() {
+    if (isAuthenticated) {
+      setShowTeacherPanel(true)
+    } else {
+      setShowLogin(true)
+    }
   }
 
   return (
     <>
       <HealthStatus />
-      {showTeacherPanel && <TeacherPanel onClose={() => setShowTeacherPanel(false)} />}
+      {showLogin && (
+        <LoginModal 
+          onLogin={handleLoginSuccess}
+          onCancel={() => setShowLogin(false)}
+        />
+      )}
+      {showTeacherPanel && isAuthenticated && (
+        <TeacherPanel 
+          onClose={() => setShowTeacherPanel(false)}
+          onLogout={handleLogout}
+        />
+      )}
       <header className="app-header">
         <div className="header-content">
           <img 
@@ -415,35 +445,12 @@ export default function App() {
       </div>
       
       {/* Botón flotante para acceso docente */}
-      {userRole === 'teacher' && (
-        <button 
-          className="btn-teacher-access"
-          onClick={() => setShowTeacherPanel(true)}
-          title="Abrir panel de docentes"
-        >
-          🎓 Panel Docente
-        </button>
-      )}
-      
-      {/* Toggle de rol (solo para desarrollo/demo) */}
       <button 
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          left: '24px',
-          padding: '10px 16px',
-          background: 'rgba(0,0,0,0.7)',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '12px',
-          cursor: 'pointer',
-          zIndex: 1000
-        }}
-        onClick={toggleRole}
-        title="Cambiar modo de usuario"
+        className="btn-teacher-access"
+        onClick={attemptOpenPanel}
+        title="Acceso panel de docentes"
       >
-        {userRole === 'student' ? '👨‍🎓 Estudiante' : '🎓 Docente'}
+        🎓 Panel Docente
       </button>
     </>
   )

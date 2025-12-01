@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
-export default function TeacherPanel({ onClose }) {
+export default function TeacherPanel({ onClose, onLogout }) {
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState(null)
@@ -10,11 +12,17 @@ export default function TeacherPanel({ onClose }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState(null)
   const [filter, setFilter] = useState({ theme: '', difficulty: '', search: '' })
-  const [view, setView] = useState('list') // 'list' | 'edit' | 'stats'
+  const [view, setView] = useState('list') // 'list' | 'edit' | 'stats' | 'collections'
+  const [collections, setCollections] = useState([])
+  const [selectedCollection, setSelectedCollection] = useState(null)
+  const [showNewCollectionForm, setShowNewCollectionForm] = useState(false)
+  const [newCollectionName, setNewCollectionName] = useState('')
+  const [newCollectionDesc, setNewCollectionDesc] = useState('')
 
   useEffect(() => {
     loadCases()
     loadStatistics()
+    loadCollections()
   }, [])
 
   async function loadCases() {
@@ -41,6 +49,109 @@ export default function TeacherPanel({ onClose }) {
       }
     } catch (e) {
       console.error('Error cargando estadísticas:', e)
+    }
+  }
+
+  async function loadCollections() {
+    try {
+      const res = await fetch(`${API_BASE}/api/collections`)
+      const data = await res.json()
+      if (data.ok) {
+        setCollections(data.collections || [])
+      }
+    } catch (e) {
+      console.error('Error cargando colecciones:', e)
+    }
+  }
+
+  async function createCollection() {
+    if (!newCollectionName.trim()) {
+      alert('El nombre es requerido')
+      return
+    }
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/collections`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCollectionName,
+          description: newCollectionDesc
+        })
+      })
+      const data = await res.json()
+      if (data.ok) {
+        alert('Colección creada exitosamente')
+        setNewCollectionName('')
+        setNewCollectionDesc('')
+        setShowNewCollectionForm(false)
+        loadCollections()
+      }
+    } catch (e) {
+      alert('Error creando colección: ' + e.message)
+    }
+  }
+
+  async function deleteCollection(collectionId) {
+    if (!confirm('¿Estás seguro de eliminar esta colección?')) return
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/collections/${collectionId}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.ok) {
+        alert('Colección eliminada')
+        loadCollections()
+      }
+    } catch (e) {
+      alert('Error eliminando colección: ' + e.message)
+    }
+  }
+
+  async function viewCollection(collectionId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/collections/${collectionId}`)
+      const data = await res.json()
+      if (data.ok) {
+        setSelectedCollection(data.collection)
+      }
+    } catch (e) {
+      alert('Error cargando colección: ' + e.message)
+    }
+  }
+
+  async function addCaseToCollection(collectionId, caseId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/collections/${collectionId}/cases/${caseId}`, {
+        method: 'POST'
+      })
+      const data = await res.json()
+      if (data.ok) {
+        alert('Caso agregado a la colección')
+        if (selectedCollection && selectedCollection.id === collectionId) {
+          viewCollection(collectionId)
+        }
+        loadCollections()
+      }
+    } catch (e) {
+      alert('Error: ' + e.message)
+    }
+  }
+
+  async function removeCaseFromCollection(collectionId, caseId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/collections/${collectionId}/cases/${caseId}`, {
+        method: 'DELETE'
+      })
+      const data = await res.json()
+      if (data.ok) {
+        alert('Caso removido de la colección')
+        viewCollection(collectionId)
+        loadCollections()
+      }
+    } catch (e) {
+      alert('Error: ' + e.message)
     }
   }
 
@@ -159,6 +270,149 @@ export default function TeacherPanel({ onClose }) {
     link.click()
   }
 
+  function exportToPDF() {
+    const doc = new jsPDF()
+    
+    // Título
+    doc.setFontSize(18)
+    doc.setTextColor(37, 99, 235)
+    doc.text('Simulador de Casos - Trabajo Social', 14, 20)
+    
+    doc.setFontSize(12)
+    doc.setTextColor(75, 85, 99)
+    doc.text('Universidad de Aysén', 14, 28)
+    doc.text(`Fecha de exportación: ${new Date().toLocaleDateString('es-CL')}`, 14, 34)
+    
+    // Línea separadora
+    doc.setDrawColor(229, 231, 235)
+    doc.line(14, 38, 196, 38)
+    
+    // Estadísticas resumidas
+    doc.setFontSize(10)
+    doc.setTextColor(0, 0, 0)
+    doc.text(`Total de casos: ${filteredCases.length}`, 14, 45)
+    
+    // Tabla de casos
+    const tableData = filteredCases.map(c => [
+      c.id,
+      c.title || c.case_id || 'Sin título',
+      c.theme || '-',
+      c.difficulty || '-',
+      c.created_at ? new Date(c.created_at).toLocaleDateString('es-CL') : '-',
+      '⭐'.repeat(c.rating || 0) || '-'
+    ])
+    
+    doc.autoTable({
+      head: [['ID', 'Título', 'Tema', 'Dificultad', 'Fecha', 'Rating']],
+      body: tableData,
+      startY: 50,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [37, 99, 235], textColor: 255 },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: {
+        0: { cellWidth: 15 },
+        1: { cellWidth: 70 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 20 }
+      }
+    })
+    
+    // Pie de página en cada página
+    const pageCount = doc.internal.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i)
+      doc.setFontSize(8)
+      doc.setTextColor(156, 163, 175)
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        doc.internal.pageSize.width / 2,
+        doc.internal.pageSize.height - 10,
+        { align: 'center' }
+      )
+    }
+    
+    doc.save(`casos-trabajo-social-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
+  function exportDetailedPDF() {
+    const doc = new jsPDF()
+    let yPosition = 20
+    
+    filteredCases.forEach((caseItem, index) => {
+      if (index > 0) {
+        doc.addPage()
+        yPosition = 20
+      }
+      
+      // Encabezado del caso
+      doc.setFontSize(16)
+      doc.setTextColor(37, 99, 235)
+      doc.text(`Caso #${caseItem.id}: ${caseItem.title || 'Sin título'}`, 14, yPosition)
+      yPosition += 8
+      
+      // Metadatos
+      doc.setFontSize(10)
+      doc.setTextColor(75, 85, 99)
+      doc.text(`Tema: ${caseItem.theme || '-'}`, 14, yPosition)
+      yPosition += 6
+      doc.text(`Dificultad: ${caseItem.difficulty || '-'}`, 14, yPosition)
+      yPosition += 6
+      doc.text(`Rating: ${'⭐'.repeat(caseItem.rating || 0) || 'Sin rating'}`, 14, yPosition)
+      yPosition += 10
+      
+      // Descripción
+      doc.setFontSize(11)
+      doc.setTextColor(0, 0, 0)
+      const description = caseItem.payload?.text || caseItem.payload?.description || 'Sin descripción'
+      const splitDescription = doc.splitTextToSize(description, 180)
+      doc.text(splitDescription, 14, yPosition)
+      yPosition += splitDescription.length * 5 + 10
+      
+      // Objetivos
+      if (caseItem.payload?.learning_objectives || caseItem.payload?.checklist) {
+        doc.setFontSize(12)
+        doc.setTextColor(37, 99, 235)
+        doc.text('Objetivos de Aprendizaje:', 14, yPosition)
+        yPosition += 6
+        
+        doc.setFontSize(10)
+        doc.setTextColor(0, 0, 0)
+        const objectives = caseItem.payload?.learning_objectives || caseItem.payload?.checklist || []
+        objectives.forEach((obj, i) => {
+          if (yPosition > 270) {
+            doc.addPage()
+            yPosition = 20
+          }
+          const splitObj = doc.splitTextToSize(`${i + 1}. ${obj}`, 175)
+          doc.text(splitObj, 18, yPosition)
+          yPosition += splitObj.length * 5 + 3
+        })
+      }
+      
+      // Notas del docente
+      if (caseItem.notes) {
+        yPosition += 5
+        if (yPosition > 260) {
+          doc.addPage()
+          yPosition = 20
+        }
+        doc.setFontSize(12)
+        doc.setTextColor(245, 158, 11)
+        doc.text('Notas del Docente:', 14, yPosition)
+        yPosition += 6
+        
+        doc.setFontSize(10)
+        doc.setTextColor(0, 0, 0)
+        const splitNotes = doc.splitTextToSize(caseItem.notes, 180)
+        doc.text(splitNotes, 14, yPosition)
+      }
+    })
+    
+    doc.save(`casos-detallados-${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
   return (
     <div className="teacher-panel-overlay">
       <div className="teacher-panel">
@@ -167,7 +421,12 @@ export default function TeacherPanel({ onClose }) {
             <h2>🎓 Panel de Docentes</h2>
             <p className="panel-subtitle">Gestión y administración de casos</p>
           </div>
-          <button className="btn-close" onClick={onClose}>✕</button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
+              🚪 Salir
+            </button>
+            <button className="btn-close" onClick={onClose}>✕</button>
+          </div>
         </div>
 
         <div className="panel-nav">
@@ -176,6 +435,12 @@ export default function TeacherPanel({ onClose }) {
             onClick={() => setView('list')}
           >
             📋 Lista de Casos
+          </button>
+          <button 
+            className={view === 'collections' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => { setView('collections'); setSelectedCollection(null) }}
+          >
+            📚 Colecciones
           </button>
           <button 
             className={view === 'stats' ? 'nav-btn active' : 'nav-btn'}
@@ -217,6 +482,8 @@ export default function TeacherPanel({ onClose }) {
                 <div className="export-buttons">
                   <button className="btn-export" onClick={exportToJSON}>📥 JSON</button>
                   <button className="btn-export" onClick={exportToCSV}>📥 CSV</button>
+                  <button className="btn-export btn-export-pdf" onClick={exportToPDF}>📄 PDF Resumen</button>
+                  <button className="btn-export btn-export-pdf" onClick={exportDetailedPDF}>📄 PDF Detallado</button>
                 </div>
               </div>
 
@@ -410,6 +677,174 @@ export default function TeacherPanel({ onClose }) {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {view === 'collections' && !selectedCollection && (
+            <div className="collections-view">
+              <div className="collections-header">
+                <h3>📚 Gestión de Colecciones</h3>
+                <button 
+                  className="btn-primary"
+                  onClick={() => setShowNewCollectionForm(!showNewCollectionForm)}
+                >
+                  {showNewCollectionForm ? '❌ Cancelar' : '➕ Nueva Colección'}
+                </button>
+              </div>
+
+              {showNewCollectionForm && (
+                <div className="new-collection-form">
+                  <div className="form-group">
+                    <label className="form-label">Nombre de la Colección</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={newCollectionName}
+                      onChange={(e) => setNewCollectionName(e.target.value)}
+                      placeholder="Ej: Casos para Semana 1"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Descripción (opcional)</label>
+                    <textarea
+                      className="form-textarea"
+                      rows={3}
+                      value={newCollectionDesc}
+                      onChange={(e) => setNewCollectionDesc(e.target.value)}
+                      placeholder="Describe el propósito de esta colección..."
+                    />
+                  </div>
+                  <button className="btn-primary" onClick={createCollection}>
+                    Crear Colección
+                  </button>
+                </div>
+              )}
+
+              <div className="collections-grid">
+                {collections.length === 0 ? (
+                  <div className="empty-state">
+                    <p>No hay colecciones creadas aún.</p>
+                    <p>Crea una colección para organizar tus casos.</p>
+                  </div>
+                ) : (
+                  collections.map(col => (
+                    <div key={col.id} className="collection-card">
+                      <div className="collection-card-header">
+                        <h4>{col.name}</h4>
+                        <span className="collection-badge">{col.case_count} casos</span>
+                      </div>
+                      {col.description && (
+                        <p className="collection-description">{col.description}</p>
+                      )}
+                      <div className="collection-date">
+                        Creada: {new Date(col.created_at).toLocaleDateString('es-CL')}
+                      </div>
+                      <div className="collection-actions">
+                        <button 
+                          className="btn-secondary"
+                          onClick={() => viewCollection(col.id)}
+                        >
+                          Ver Casos
+                        </button>
+                        <button 
+                          className="btn-action btn-delete"
+                          onClick={() => deleteCollection(col.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {view === 'collections' && selectedCollection && (
+            <div className="collection-detail">
+              <div className="collection-detail-header">
+                <button 
+                  className="btn-back"
+                  onClick={() => setSelectedCollection(null)}
+                >
+                  ← Volver a Colecciones
+                </button>
+                <h3>📚 {selectedCollection.name}</h3>
+              </div>
+
+              {selectedCollection.description && (
+                <p className="collection-description-detail">{selectedCollection.description}</p>
+              )}
+
+              <div className="add-case-section">
+                <h4>Agregar Caso a esta Colección</h4>
+                <select 
+                  className="form-select"
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      addCaseToCollection(selectedCollection.id, parseInt(e.target.value))
+                      e.target.value = ''
+                    }
+                  }}
+                >
+                  <option value="">Selecciona un caso...</option>
+                  {cases
+                    .filter(c => !selectedCollection.cases.find(sc => sc.id === c.id))
+                    .map(c => (
+                      <option key={c.id} value={c.id}>
+                        #{c.id} - {c.title || c.case_id}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <h4 style={{ marginTop: '24px' }}>Casos en esta Colección ({selectedCollection.cases.length})</h4>
+              
+              {selectedCollection.cases.length === 0 ? (
+                <div className="empty-state">
+                  <p>Esta colección no tiene casos aún.</p>
+                  <p>Agrega casos usando el selector de arriba.</p>
+                </div>
+              ) : (
+                <div className="cases-table-container">
+                  <table className="cases-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Tema</th>
+                        <th>Dificultad</th>
+                        <th>Rating</th>
+                        <th>Agregado</th>
+                        <th>Acción</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedCollection.cases.map(c => (
+                        <tr key={c.id}>
+                          <td>{c.id}</td>
+                          <td className="case-title-cell">{c.title || c.case_id}</td>
+                          <td><span className="badge-small badge-theme">{c.theme}</span></td>
+                          <td><span className="badge-small badge-difficulty">{c.difficulty}</span></td>
+                          <td><span className="rating">{'⭐'.repeat(c.rating || 0)}</span></td>
+                          <td className="date-cell">
+                            {c.added_to_collection_at ? new Date(c.added_to_collection_at).toLocaleDateString('es-CL') : '-'}
+                          </td>
+                          <td>
+                            <button 
+                              className="btn-action btn-delete"
+                              onClick={() => removeCaseFromCollection(selectedCollection.id, c.id)}
+                              title="Quitar de colección"
+                            >
+                              ✖️
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>

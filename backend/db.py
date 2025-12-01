@@ -9,6 +9,8 @@ def init_db(db_path: str):
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
+    
+    # Tabla de casos
     cur.execute("""
     CREATE TABLE IF NOT EXISTS cases (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,6 +27,32 @@ def init_db(db_path: str):
         notes TEXT
     )
     """)
+    
+    # Tabla de colecciones
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        status TEXT DEFAULT 'active'
+    )
+    """)
+    
+    # Tabla de relación casos-colecciones (muchos a muchos)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS collection_cases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        collection_id INTEGER NOT NULL,
+        case_id INTEGER NOT NULL,
+        added_at TEXT,
+        FOREIGN KEY (collection_id) REFERENCES collections(id),
+        FOREIGN KEY (case_id) REFERENCES cases(id),
+        UNIQUE(collection_id, case_id)
+    )
+    """)
+    
     # Migración: agregar columnas si no existen
     try:
         cur.execute("ALTER TABLE cases ADD COLUMN updated_at TEXT")
@@ -258,3 +286,198 @@ def get_statistics(db_path: str) -> Dict:
         "average_rating": round(avg_rating, 2),
         "recent_cases": recent,
     }
+
+
+# ===== Funciones de Colecciones =====
+
+def create_collection(db_path: str, name: str, description: str = "") -> Dict:
+    """Crea una nueva colección."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    created_at = datetime.utcnow().isoformat()
+    cur.execute(
+        "INSERT INTO collections (name, description, created_at, updated_at, status) VALUES (?,?,?,?,?)",
+        (name, description, created_at, created_at, "active")
+    )
+    conn.commit()
+    collection_id = cur.lastrowid
+    conn.close()
+    return {
+        "id": collection_id,
+        "name": name,
+        "description": description,
+        "created_at": created_at,
+        "updated_at": created_at,
+        "status": "active"
+    }
+
+
+def list_collections(db_path: str) -> List[Dict]:
+    """Lista todas las colecciones activas con conteo de casos."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT c.id, c.name, c.description, c.created_at, c.updated_at, c.status,
+               COUNT(cc.case_id) as case_count
+        FROM collections c
+        LEFT JOIN collection_cases cc ON c.id = cc.collection_id
+        WHERE c.status = 'active'
+        GROUP BY c.id
+        ORDER BY c.created_at DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    
+    results = []
+    for row in rows:
+        results.append({
+            "id": row[0],
+            "name": row[1],
+            "description": row[2],
+            "created_at": row[3],
+            "updated_at": row[4],
+            "status": row[5],
+            "case_count": row[6]
+        })
+    return results
+
+
+def get_collection(db_path: str, collection_id: int) -> Optional[Dict]:
+    """Obtiene una colección con sus casos."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    
+    # Obtener info de la colección
+    cur.execute("SELECT id, name, description, created_at, updated_at, status FROM collections WHERE id = ?", (collection_id,))
+    row = cur.fetchone()
+    if not row:
+        conn.close()
+        return None
+    
+    collection = {
+        "id": row[0],
+        "name": row[1],
+        "description": row[2],
+        "created_at": row[3],
+        "updated_at": row[4],
+        "status": row[5],
+        "cases": []
+    }
+    
+    # Obtener casos de la colección
+    cur.execute("""
+        SELECT c.id, c.case_id, c.title, c.theme, c.difficulty, c.payload, c.created_at, 
+               c.updated_at, c.status, c.rating, c.tags, c.notes, cc.added_at
+        FROM cases c
+        JOIN collection_cases cc ON c.id = cc.case_id
+        WHERE cc.collection_id = ? AND c.status != 'deleted'
+        ORDER BY cc.added_at DESC
+    """, (collection_id,))
+    
+    for row in cur.fetchall():
+        collection["cases"].append({
+            "id": row[0],
+            "case_id": row[1],
+            "title": row[2],
+            "theme": row[3],
+            "difficulty": row[4],
+            "payload": json.loads(row[5]) if row[5] else None,
+            "created_at": row[6],
+            "updated_at": row[7],
+            "status": row[8],
+            "rating": row[9],
+            "tags": json.loads(row[10]) if row[10] else [],
+            "notes": row[11],
+            "added_to_collection_at": row[12]
+        })
+    
+    conn.close()
+    return collection
+
+
+def add_case_to_collection(db_path: str, collection_id: int, case_id: int) -> bool:
+    """Agrega un caso a una colección."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    added_at = datetime.utcnow().isoformat()
+    try:
+        cur.execute(
+            "INSERT INTO collection_cases (collection_id, case_id, added_at) VALUES (?,?,?)",
+            (collection_id, case_id, added_at)
+        )
+        # Actualizar updated_at de la colección
+        cur.execute(
+            "UPDATE collections SET updated_at = ? WHERE id = ?",
+            (added_at, collection_id)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError:
+        conn.close()
+        return False
+
+
+def remove_case_from_collection(db_path: str, collection_id: int, case_id: int) -> bool:
+    """Remueve un caso de una colección."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM collection_cases WHERE collection_id = ? AND case_id = ?",
+        (collection_id, case_id)
+    )
+    affected = cur.rowcount
+    if affected > 0:
+        cur.execute(
+            "UPDATE collections SET updated_at = ? WHERE id = ?",
+            (datetime.utcnow().isoformat(), collection_id)
+        )
+    conn.commit()
+    conn.close()
+    return affected > 0
+
+
+def update_collection(db_path: str, collection_id: int, name: Optional[str] = None, description: Optional[str] = None) -> Optional[Dict]:
+    """Actualiza una colección."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    
+    updates = []
+    params = []
+    
+    if name is not None:
+        updates.append("name = ?")
+        params.append(name)
+    
+    if description is not None:
+        updates.append("description = ?")
+        params.append(description)
+    
+    if not updates:
+        conn.close()
+        return None
+    
+    updates.append("updated_at = ?")
+    params.append(datetime.utcnow().isoformat())
+    params.append(collection_id)
+    
+    query = f"UPDATE collections SET {', '.join(updates)} WHERE id = ?"
+    cur.execute(query, params)
+    conn.commit()
+    conn.close()
+    
+    return get_collection(db_path, collection_id)
+
+
+def delete_collection(db_path: str, collection_id: int) -> bool:
+    """Elimina una colección (soft delete)."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE collections SET status = ?, updated_at = ? WHERE id = ?",
+        ("deleted", datetime.utcnow().isoformat(), collection_id)
+    )
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0

@@ -332,6 +332,113 @@ async def get_statistics_endpoint():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ===== Endpoints de Colecciones =====
+
+@app.post("/api/collections")
+async def create_collection_endpoint(data: dict):
+    """Crea una nueva colección."""
+    try:
+        name = data.get("name")
+        description = data.get("description", "")
+        if not name:
+            raise HTTPException(status_code=400, detail="El nombre es requerido")
+        collection = _db.create_collection(DB_PATH, name, description)
+        return {"ok": True, "collection": collection}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error creando colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/collections")
+async def list_collections_endpoint():
+    """Lista todas las colecciones."""
+    try:
+        collections = _db.list_collections(DB_PATH)
+        return {"ok": True, "collections": collections}
+    except Exception as e:
+        logger.exception("Error listando colecciones")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/collections/{collection_id}")
+async def get_collection_endpoint(collection_id: int):
+    """Obtiene una colección con sus casos."""
+    try:
+        collection = _db.get_collection(DB_PATH, collection_id)
+        if not collection:
+            raise HTTPException(status_code=404, detail="Colección no encontrada")
+        return {"ok": True, "collection": collection}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error obteniendo colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/collections/{collection_id}")
+async def update_collection_endpoint(collection_id: int, data: dict):
+    """Actualiza una colección."""
+    try:
+        name = data.get("name")
+        description = data.get("description")
+        collection = _db.update_collection(DB_PATH, collection_id, name, description)
+        if not collection:
+            raise HTTPException(status_code=404, detail="Colección no encontrada")
+        return {"ok": True, "collection": collection}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error actualizando colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/collections/{collection_id}")
+async def delete_collection_endpoint(collection_id: int):
+    """Elimina una colección."""
+    try:
+        deleted = _db.delete_collection(DB_PATH, collection_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Colección no encontrada")
+        return {"ok": True, "message": "Colección eliminada exitosamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error eliminando colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/collections/{collection_id}/cases/{case_id}")
+async def add_case_to_collection_endpoint(collection_id: int, case_id: int):
+    """Agrega un caso a una colección."""
+    try:
+        added = _db.add_case_to_collection(DB_PATH, collection_id, case_id)
+        if not added:
+            raise HTTPException(status_code=400, detail="El caso ya está en la colección o no existe")
+        return {"ok": True, "message": "Caso agregado a la colección"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error agregando caso a colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/collections/{collection_id}/cases/{case_id}")
+async def remove_case_from_collection_endpoint(collection_id: int, case_id: int):
+    """Remueve un caso de una colección."""
+    try:
+        removed = _db.remove_case_from_collection(DB_PATH, collection_id, case_id)
+        if not removed:
+            raise HTTPException(status_code=404, detail="Caso no encontrado en la colección")
+        return {"ok": True, "message": "Caso removido de la colección"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error removiendo caso de colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     import uvicorn
 
