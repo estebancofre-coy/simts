@@ -1,0 +1,184 @@
+nohup: ignoring input
+
+> simts-frontend@0.0.0 dev
+> vite --host 0.0.0.0
+
+
+  VITE v5.4.21  ready in 2087 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://10.0.0.242:5173/
+2:32:50 AM [vite] Pre-transform error: /workspaces/simts/frontend/src/App.jsx: `import` can only be used in `import()` or `import.meta`. (12:2)
+
+  10 |   'Adulto mayor',
+  11 |   'Migración y multiculturalidad',
+> 12 |   import { useState, useEffect } from 'react'
+     |   ^
+  13 |   'Reinserción social'
+  14 | ]
+  15 |
+2:32:50 AM [vite] Internal server error: /workspaces/simts/frontend/src/App.jsx: `import` can only be used in `import()` or `import.meta`. (12:2)
+
+  10 |   'Adulto mayor',
+  11 |   'Migración y multiculturalidad',
+> 12 |   import { useState, useEffect } from 'react'
+     |   ^
+  13 |   'Reinserción social'
+  14 | ]
+  15 |
+  Plugin: vite:react-babel
+  File: /workspaces/simts/frontend/src/App.jsx:12:2
+  10 |    'Adulto mayor',
+  11 |    'Migración y multiculturalidad',
+  12 |    import { useState, useEffect } from 'react'
+     |    ^
+  13 |    'Reinserción social'
+  14 |  ]
+      at constructor (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+      at JSXParserMixin.raise (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:6624:19)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11363:16)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:4793:20)
+      at JSXParserMixin.parseExprSubscripts (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11145:23)
+      at JSXParserMixin.parseUpdate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11130:21)
+      at JSXParserMixin.parseMaybeUnary (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11110:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10963:61)
+      at JSXParserMixin.parseExprOps (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10968:23)
+      at JSXParserMixin.parseMaybeConditional (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10945:23)
+      at JSXParserMixin.parseMaybeAssign (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10895:21)
+      at /workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:39
+      at JSXParserMixin.allowInAnd (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12500:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12567:17)
+      at JSXParserMixin.parseExprListItem (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12249:18)
+      at JSXParserMixin.parseExprList (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12224:22)
+      at JSXParserMixin.parseArrayLike (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12131:26)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11399:23)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:4793:20)
+      at JSXParserMixin.parseExprSubscripts (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11145:23)
+      at JSXParserMixin.parseUpdate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11130:21)
+      at JSXParserMixin.parseMaybeUnary (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11110:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10963:61)
+      at JSXParserMixin.parseExprOps (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10968:23)
+      at JSXParserMixin.parseMaybeConditional (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10945:23)
+      at JSXParserMixin.parseMaybeAssign (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10895:21)
+      at /workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:39
+      at JSXParserMixin.allowInAnd (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12495:16)
+      at JSXParserMixin.parseMaybeAssignAllowIn (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:17)
+      at JSXParserMixin.parseVar (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13460:91)
+      at JSXParserMixin.parseVarStatement (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13306:10)
+      at JSXParserMixin.parseStatementContent (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12927:23)
+      at JSXParserMixin.parseStatementLike (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12843:17)
+      at JSXParserMixin.parseModuleItem (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12820:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13392:36)
+      at JSXParserMixin.parseBlockBody (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13385:10)
+      at JSXParserMixin.parseProgram (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12698:10)
+      at JSXParserMixin.parseTopLevel (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12688:25)
+      at JSXParserMixin.parse (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:14568:25)
+      at parse (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:14602:38)
+      at parser (/workspaces/simts/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/workspaces/simts/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/workspaces/simts/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/workspaces/simts/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/workspaces/simts/frontend/node_modules/gensync/index.js:261:32)
+Vim: Warning: Output is not to a terminal
+Vim: Warning: Input is not from a terminal
+[?1049h[22;0;0t[>4;2m[?1h=[?2004h[?1004h[1;24r[?12h[?12l[22;2t[22;1t[27m[23m[29m[m[H[2J[?2004l[>4;m[?2004h[>4;2m[?25l[24;1H"/workspaces/simts/frontend/src/App.jsx"[?2004l[>4;m[?2004h[>4;2m<workspaces/simts/frontend/src/App.jsx" 183L, 6353B[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[1;1H[38;5;130mimport[m [36m{[m useState [36m}[m from [31m'react'[?2004l[>4;m[?2004h[>4;2m[m
+
+[38;5;130mconst[m API_BASE = [38;5;130mimport[m.meta.env.VITE_API_URL || [31m''[m
+
+[38;5;130mconst[m THEMES = [36m[[?2004l[>4;m[?2004h[>4;2m[m
+  [31m'Familia y diná[6;18Hmicas familiares'[m,
+  [31m'Infancia y adolescencia'[m,[?2004l[>4;m[?2004h[>4;2m
+  [31m'Salud mental'[m,
+  [31m'Violencia intrafamiliar'[m,
+  [31m'Adulto mayor'[m,[?2004l[>4;m[?2004h[>4;2m
+  [31m'Migració[11;12Hn y multiculturalidad'[m,[?2004l[>4;m[?2004h[>4;2m
+  [38;5;130mimport[m [36m{[m useState, useEffect [36m}[m from [31m'react'
+[m  [31m'Reinserció[13;14Hn social'[m
+[36m][?2004l[>4;m[?2004h[>4;2m[m
+
+[38;5;130mexport[m [38;5;130mdefault[m [36mfunction[m App() [36m{[?2004l[>4;m[?2004h[>4;2m[m
+  [38;5;130mconst[m [36m[[mtheme, setTheme[36m][m = useState(THEMES[36m[[m[31m0[m[36m][m)[?2004l[>4;m[?2004h[>4;2m
+  [38;5;130mconst[m [36m[[mdifficulty, setDifficulty[36m][m = useState([31m'basico'[m)[?2004l[>4;m[?2004h[>4;2m
+  [38;5;130mconst[m [36m[[mcaseObj, setCaseObj[36m][m = useState([38;5;130mnull[m)[?2004l[>4;m[?2004h[>4;2m
+  [38;5;130mconst[m [36m[[mresponseText, setResponseText[36m][m = useState([31m''[m)[?2004l[>4;m[?2004h[>4;2m
+  [38;5;130mconst[m [36m[[mloading, setLoading[36m][m = useState([31mfalse[m)
+
+  [38;5;130masync[m [36mfunction[m generateCase() [36m{[m[24;63H1,1[11CTop[1;1H[?25h[?4m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[?2004l[>4;m[?2004h[>4;2m[24;1H[?2004l[>4;m[?1004l[?2004l[?1l>[?1049l[23;0;0t[>4;mVim: Error reading input, exiting...
+Vim: Finished.
+[24;1H[23;2t[23;1t
+
+Could not open App.jsx in the editor.
+The editor process exited with an error: (code 1).
+
+2:33:08 AM [vite] Internal server error: /workspaces/simts/frontend/src/App.jsx: `import` can only be used in `import()` or `import.meta`. (12:2)
+
+  10 |   'Adulto mayor',
+  11 |   'Migración y multiculturalidad',
+> 12 |   import { useState, useEffect } from 'react'
+     |   ^
+  13 |   'Reinserción social'
+  14 | ]
+  15 |
+  Plugin: vite:react-babel
+  File: /workspaces/simts/frontend/src/App.jsx:12:2
+  10 |    'Adulto mayor',
+  11 |    'Migración y multiculturalidad',
+  12 |    import { useState, useEffect } from 'react'
+     |    ^
+  13 |    'Reinserción social'
+  14 |  ]
+      at constructor (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+      at JSXParserMixin.raise (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:6624:19)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11363:16)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:4793:20)
+      at JSXParserMixin.parseExprSubscripts (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11145:23)
+      at JSXParserMixin.parseUpdate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11130:21)
+      at JSXParserMixin.parseMaybeUnary (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11110:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10963:61)
+      at JSXParserMixin.parseExprOps (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10968:23)
+      at JSXParserMixin.parseMaybeConditional (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10945:23)
+      at JSXParserMixin.parseMaybeAssign (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10895:21)
+      at /workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:39
+      at JSXParserMixin.allowInAnd (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12500:12)
+      at JSXParserMixin.parseMaybeAssignAllowIn (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:17)
+      at JSXParserMixin.parseMaybeAssignAllowInOrVoidPattern (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12567:17)
+      at JSXParserMixin.parseExprListItem (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12249:18)
+      at JSXParserMixin.parseExprList (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12224:22)
+      at JSXParserMixin.parseArrayLike (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12131:26)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11399:23)
+      at JSXParserMixin.parseExprAtom (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:4793:20)
+      at JSXParserMixin.parseExprSubscripts (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11145:23)
+      at JSXParserMixin.parseUpdate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11130:21)
+      at JSXParserMixin.parseMaybeUnary (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:11110:23)
+      at JSXParserMixin.parseMaybeUnaryOrPrivate (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10963:61)
+      at JSXParserMixin.parseExprOps (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10968:23)
+      at JSXParserMixin.parseMaybeConditional (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10945:23)
+      at JSXParserMixin.parseMaybeAssign (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10895:21)
+      at /workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:39
+      at JSXParserMixin.allowInAnd (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12495:16)
+      at JSXParserMixin.parseMaybeAssignAllowIn (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:10864:17)
+      at JSXParserMixin.parseVar (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13460:91)
+      at JSXParserMixin.parseVarStatement (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13306:10)
+      at JSXParserMixin.parseStatementContent (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12927:23)
+      at JSXParserMixin.parseStatementLike (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12843:17)
+      at JSXParserMixin.parseModuleItem (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12820:17)
+      at JSXParserMixin.parseBlockOrModuleBlockBody (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13392:36)
+      at JSXParserMixin.parseBlockBody (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:13385:10)
+      at JSXParserMixin.parseProgram (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12698:10)
+      at JSXParserMixin.parseTopLevel (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:12688:25)
+      at JSXParserMixin.parse (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:14568:25)
+      at parse (/workspaces/simts/frontend/node_modules/@babel/parser/lib/index.js:14602:38)
+      at parser (/workspaces/simts/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+      at parser.next (<anonymous>)
+      at normalizeFile (/workspaces/simts/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+      at normalizeFile.next (<anonymous>)
+      at run (/workspaces/simts/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+      at run.next (<anonymous>)
+      at transform (/workspaces/simts/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+      at transform.next (<anonymous>)
+      at step (/workspaces/simts/frontend/node_modules/gensync/index.js:261:32)

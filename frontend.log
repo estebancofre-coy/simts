@@ -1,0 +1,10 @@
+nohup: ignoring input
+
+> simts-frontend@0.0.0 dev
+> vite --host 0.0.0.0
+
+
+  VITE v5.4.21  ready in 203 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://10.0.1.113:5173/
