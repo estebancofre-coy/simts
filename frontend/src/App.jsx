@@ -2,6 +2,109 @@ import { useState, useEffect } from 'react'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
+// Componente para preguntas interactivas
+function QuestionsList({ questions }) {
+  const [selectedAnswers, setSelectedAnswers] = useState({})
+
+  const handleSelect = (questionIndex, optionIndex) => {
+    setSelectedAnswers(prev => ({
+      ...prev,
+      [questionIndex]: optionIndex
+    }))
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <h3>Preguntas de evaluación</h3>
+      {questions.map((q, qIndex) => {
+        const selected = selectedAnswers[qIndex]
+        const isAnswered = selected !== undefined
+        const correctIndex = q.correct_index !== undefined ? q.correct_index : q.correctIndex
+
+        return (
+          <div key={qIndex} style={{ 
+            marginBottom: 24, 
+            padding: 16, 
+            border: '1px solid #ddd', 
+            borderRadius: 8,
+            backgroundColor: '#f9f9f9'
+          }}>
+            <div style={{ marginBottom: 12, fontWeight: 'bold', fontSize: 16 }}>
+              {qIndex + 1}. {q.question || q.text}
+            </div>
+            
+            <div style={{ marginLeft: 12 }}>
+              {(q.options || []).map((opt, oIndex) => {
+                const isCorrect = oIndex === correctIndex
+                const isSelected = selected === oIndex
+                let bgColor = '#fff'
+                let borderColor = '#ccc'
+                let color = '#000'
+                
+                if (isAnswered) {
+                  if (isSelected) {
+                    if (isCorrect) {
+                      bgColor = '#d4edda'
+                      borderColor = '#28a745'
+                      color = '#155724'
+                    } else {
+                      bgColor = '#f8d7da'
+                      borderColor = '#dc3545'
+                      color = '#721c24'
+                    }
+                  } else if (isCorrect) {
+                    bgColor = '#d1ecf1'
+                    borderColor = '#17a2b8'
+                    color = '#0c5460'
+                  }
+                }
+
+                return (
+                  <div
+                    key={oIndex}
+                    onClick={() => !isAnswered && handleSelect(qIndex, oIndex)}
+                    style={{
+                      padding: '10px 14px',
+                      marginBottom: 8,
+                      border: `2px solid ${borderColor}`,
+                      borderRadius: 6,
+                      backgroundColor: bgColor,
+                      color: color,
+                      cursor: isAnswered ? 'default' : 'pointer',
+                      transition: 'all 0.2s',
+                      fontWeight: isCorrect && isAnswered ? 'bold' : 'normal'
+                    }}
+                  >
+                    <span style={{ marginRight: 8 }}>
+                      {String.fromCharCode(65 + oIndex)})
+                    </span>
+                    {opt}
+                    {isAnswered && isCorrect && ' ✓'}
+                    {isAnswered && isSelected && !isCorrect && ' ✗'}
+                  </div>
+                )
+              })}
+            </div>
+
+            {isAnswered && (
+              <div style={{ 
+                marginTop: 12, 
+                padding: 12, 
+                backgroundColor: '#fff3cd', 
+                border: '1px solid #ffc107',
+                borderRadius: 6,
+                fontSize: 14
+              }}>
+                <strong>Justificación:</strong> {q.justification || q.explanation || 'No disponible'}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // Health check component
 function HealthStatus() {
   const [backendStatus, setBackendStatus] = useState('checking')
@@ -163,31 +266,16 @@ export default function App() {
             </div>
           )}
 
-          {/* Preguntas */}
-          {caseObj.suggested_questions && (
+          {/* Preguntas interactivas */}
+          {caseObj.questions && <QuestionsList questions={caseObj.questions} />}
+          
+          {/* Fallback para formato antiguo */}
+          {caseObj.suggested_questions && !caseObj.questions && (
             <div>
               <strong>Preguntas sugeridas</strong>
               <ul>
                 {caseObj.suggested_questions.map((q, i) => <li key={i}>{q}</li>)}
               </ul>
-            </div>
-          )}
-          {caseObj.questions && (
-            <div>
-              <strong>Preguntas (detalle)</strong>
-              <ol>
-                {caseObj.questions.map((q, i) => (
-                  <li key={i}>
-                    <div><strong>{q.text}</strong></div>
-                    {q.options && (
-                      <ul>
-                        {q.options.map((opt, j) => <li key={j}>{opt}</li>)}
-                      </ul>
-                    )}
-                    {q.explanation && <div style={{ fontSize: 12, color: '#444' }}>Explicación: {q.explanation}</div>}
-                  </li>
-                ))}
-              </ol>
             </div>
           )}
 

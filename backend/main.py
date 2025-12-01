@@ -152,11 +152,24 @@ async def simulate(req: SimulateRequest):
         difficulty = (req.difficulty or "basico").lower()
         prompt_input = (
             f"Genera un caso clínico educativo para estudiantes de Trabajo Social. "
-            f"Tema: {theme}. Nivel de dificultad: {difficulty}.\n"
-            "Entrega la respuesta estrictamente en JSON con las siguientes claves: "
-            "'case_id' (string corto), 'title' (string), 'description' (texto del caso), "
-            "'learning_objectives' (array de strings), 'suggested_questions' (array de strings), "
-            "'suggested_interventions' (array de strings).\n"
+            f"Tema: {theme}. Nivel de dificultad: {difficulty}.\n\n"
+            "Entrega la respuesta estrictamente en JSON con las siguientes claves:\n"
+            "- 'case_id' (string corto único)\n"
+            "- 'title' (string, título del caso)\n"
+            "- 'description' (texto descriptivo del caso, contexto, situación)\n"
+            "- 'learning_objectives' (array de strings, objetivos de aprendizaje)\n"
+            "- 'questions' (array de objetos con este formato exacto):\n"
+            "  [\n"
+            "    {\n"
+            '      "question": "¿Pregunta sobre el caso?",\n'
+            '      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],\n'
+            '      "correct_index": 0,  // índice de la respuesta correcta (0-3)\n'
+            '      "justification": "Explicación de por qué esta es la respuesta correcta"\n'
+            "    }\n"
+            "  ]\n"
+            "- 'suggested_interventions' (array de strings, intervenciones sugeridas)\n\n"
+            "IMPORTANTE: Genera entre 3-5 preguntas de selección múltiple con 4 alternativas cada una. "
+            "Cada pregunta debe evaluar comprensión del caso, análisis crítico o aplicación de teoría.\n"
             "No incluyas texto adicional fuera del JSON."
         )
         try:
