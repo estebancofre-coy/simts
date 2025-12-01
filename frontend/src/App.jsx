@@ -9,13 +9,16 @@ function HealthStatus() {
   useEffect(() => {
     const checkBackend = async () => {
       try {
+        console.log('Checking backend at:', `${API_BASE}/api/health`)
         const res = await fetch(`${API_BASE}/api/health`, { method: 'GET' })
+        console.log('Backend response status:', res.status)
         if (res.ok) {
           setBackendStatus('online')
         } else {
           setBackendStatus('offline')
         }
       } catch (e) {
+        console.error('Backend check error:', e)
         setBackendStatus('offline')
       }
     }
