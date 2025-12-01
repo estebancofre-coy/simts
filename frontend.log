@@ -1,10 +1,11 @@
-nohup: ignoring input
 
 > simts-frontend@0.0.0 dev
 > vite --host 0.0.0.0
 
-
-  VITE v5.4.21  ready in 203 ms
-
-  ➜  Local:   http://localhost:5173/
-  ➜  Network: http://10.0.1.113:5173/
+error when starting dev server:
+Error: Port 5173 is already in use
+    at Server.onError (file:///workspaces/simts/frontend/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:45596:18)
+    at Server.emit (node:events:519:28)
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicks2:13:34 PM [vite] hmr update /src/App.jsx
+queues:90:21)

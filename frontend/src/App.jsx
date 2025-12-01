@@ -229,50 +229,84 @@ export default function App() {
   return (
     <>
       <HealthStatus />
+      <header className="app-header">
+        <div className="header-content">
+          <img 
+            src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png" 
+            alt="Logo Trabajo Social" 
+            className="header-logo"
+          />
+          <div className="header-text">
+            <h1>Simulador de Casos </h1>
+            <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysén</p>
+          </div>
+        </div>
+      </header>
       <div className="container layout">
         <div className="main">
-        <h1>Simulador Casos - Trabajo Social (U. Aysén)</h1>
 
-      <label>Temática</label>
-      <select value={theme} onChange={(e) => setTheme(e.target.value)}>
-        {THEMES.map((t) => (
-          <option value={t} key={t}>{t}</option>
-        ))}
-      </select>
+      <div className="config-panel">
+        <h2 className="section-title">Configuración del Caso</h2>
+        
+        <div className="form-group">
+          <label className="form-label">Temática</label>
+          <select className="form-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
+            {THEMES.map((t) => (
+              <option value={t} key={t}>{t}</option>
+            ))}
+          </select>
+        </div>
 
-      <div style={{ marginTop: 8 }}>
-        <label>Nivel de dificultad:</label>
-        <label style={{ marginLeft: 8 }}>
-          <input type="radio" name="difficulty" value="basico" checked={difficulty === 'basico'} onChange={() => setDifficulty('basico')} /> Básico
-        </label>
-        <label style={{ marginLeft: 8 }}>
-          <input type="radio" name="difficulty" value="intermedio" checked={difficulty === 'intermedio'} onChange={() => setDifficulty('intermedio')} /> Intermedio
-        </label>
-        <label style={{ marginLeft: 8 }}>
-          <input type="radio" name="difficulty" value="avanzado" checked={difficulty === 'avanzado'} onChange={() => setDifficulty('avanzado')} /> Avanzado
-        </label>
-      </div>
+        <div className="form-group">
+          <label className="form-label">Nivel de dificultad</label>
+          <div className="radio-group">
+            <label className="radio-label">
+              <input type="radio" name="difficulty" value="basico" checked={difficulty === 'basico'} onChange={() => setDifficulty('basico')} />
+              <span>Básico</span>
+            </label>
+            <label className="radio-label">
+              <input type="radio" name="difficulty" value="intermedio" checked={difficulty === 'intermedio'} onChange={() => setDifficulty('intermedio')} />
+              <span>Intermedio</span>
+            </label>
+            <label className="radio-label">
+              <input type="radio" name="difficulty" value="avanzado" checked={difficulty === 'avanzado'} onChange={() => setDifficulty('avanzado')} />
+              <span>Avanzado</span>
+            </label>
+          </div>
+        </div>
 
-      <div className="controls" style={{ marginTop: 12 }}>
-        <button onClick={generateCase} disabled={loading}>
-          {loading ? 'Generando...' : 'Generar caso'}
+        <button className="btn-primary" onClick={generateCase} disabled={loading}>
+          {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
         </button>
       </div>
 
-      <h2>Casos generados</h2>
-      {caseObj ? (
-        <div className="case">
-          <h3>{caseObj.title || caseObj.case_id || caseObj.eje || 'Caso generado'}</h3>
-          {caseObj.meta && <p><strong>Ficha:</strong> {caseObj.meta}</p>}
-          {caseObj.eje && <p><strong>Eje:</strong> {caseObj.eje}</p>}
-          {caseObj.nivel && <p><strong>Nivel:</strong> {caseObj.nivel}</p>}
-          <p>{caseObj.description || caseObj.text}</p>
+      <div className="results-section">
+        <h2 className="section-title">Caso Generado</h2>
+        {caseObj ? (
+          <div className="case">
+            <div className="case-header">
+              <h3 className="case-title">{caseObj.title || caseObj.case_id || caseObj.eje || 'Caso generado'}</h3>
+              <div className="case-meta">
+                {caseObj.eje && <span className="badge badge-theme">{caseObj.eje}</span>}
+                {caseObj.nivel && <span className="badge badge-level">{caseObj.nivel}</span>}
+              </div>
+            </div>
+            
+            {caseObj.meta && (
+              <div className="case-info">
+                <strong>📋 Ficha:</strong> {caseObj.meta}
+              </div>
+            )}
+            
+            <div className="case-description">
+              <p>{caseObj.description || caseObj.text}</p>
+            </div>
 
           {/* Objetivos / checklist */}
           {(caseObj.learning_objectives || caseObj.checklist) && (
-            <div>
-              <strong>Objetivos / Checklist</strong>
-              <ul>
+            <div className="case-section">
+              <h4 className="case-section-title">🎯 Objetivos de Aprendizaje</h4>
+              <ul className="objectives-list">
                 {(caseObj.learning_objectives || caseObj.checklist).map((o, i) => <li key={i}>{o}</li>)}
               </ul>
             </div>
@@ -283,45 +317,60 @@ export default function App() {
           
           {/* Fallback para formato antiguo */}
           {caseObj.suggested_questions && !caseObj.questions && (
-            <div>
-              <strong>Preguntas sugeridas</strong>
-              <ul>
+            <div className="case-section">
+              <h4 className="case-section-title">❓ Preguntas para Reflexionar</h4>
+              <ul className="questions-list">
                 {caseObj.suggested_questions.map((q, i) => <li key={i}>{q}</li>)}
               </ul>
             </div>
           )}
 
           {caseObj.suggested_interventions && (
-            <div>
-              <strong>Intervenciones sugeridas</strong>
-              <ul>
+            <div className="case-section">
+              <h4 className="case-section-title">💡 Intervenciones Sugeridas</h4>
+              <ul className="interventions-list">
                 {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
               </ul>
             </div>
           )}
         </div>
-      ) : (
-        <pre className="response">{responseText}</pre>
-      )}
+        ) : (
+          <div className="empty-state">
+            {responseText ? (
+              <pre className="response">{responseText}</pre>
+            ) : (
+              <p className="empty-message">👆 Configura los parámetros y genera un caso para comenzar</p>
+            )}
+          </div>
+        )}
+      </div>
       </div>
 
       <aside className="sidebar">
-        <h2>Historial de casos</h2>
-        <div style={{ marginBottom: 8 }}>
-          <button onClick={fetchHistory} disabled={loadingHistory}>Actualizar</button>
+        <div className="sidebar-header">
+          <h2 className="sidebar-title">📚 Historial</h2>
+          <button className="btn-secondary" onClick={fetchHistory} disabled={loadingHistory}>
+            {loadingHistory ? '⏳' : '🔄'}
+          </button>
         </div>
         {loadingHistory ? (
-          <div>Cargando...</div>
+          <div className="loading-state">Cargando...</div>
         ) : (
           <ul className="history-list">
-            {history.length === 0 && <li>No hay casos guardados</li>}
+            {history.length === 0 && <li className="empty-history">No hay casos guardados</li>}
             {history.map((c) => (
               <li key={c.id} className="history-item">
-                <div><strong>{c.title || c.case_id}</strong></div>
-                <div style={{ fontSize: 12, color: '#666' }}>{c.theme || ''} — {c.difficulty || ''}</div>
-                <div style={{ marginTop: 6 }}>
-                  <button onClick={() => { setCaseObj(c.payload); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Cargar</button>
+                <div className="history-title">{c.title || c.case_id}</div>
+                <div className="history-meta">
+                  {c.theme && <span className="history-tag">{c.theme}</span>}
+                  {c.difficulty && <span className="history-tag">{c.difficulty}</span>}
                 </div>
+                <button 
+                  className="btn-load" 
+                  onClick={() => { setCaseObj(c.payload); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                >
+                  Ver caso
+                </button>
               </li>
             ))}
           </ul>
