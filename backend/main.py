@@ -46,11 +46,7 @@ app = FastAPI(title="Simulador Trabajo Social - Backend")
 # Configurar CORS para permitir peticiones desde el frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Desarrollo local
-        "https://*.vercel.app",   # Cualquier dominio de Vercel
-        "https://simts-frontend*.vercel.app",  # Tu frontend específico
-    ],
+    allow_origins=["*"],  # Permite todos los orígenes (simplifica para desarrollo/producción)
     allow_credentials=True,
     allow_methods=["*"],  # Permite GET, POST, etc.
     allow_headers=["*"],  # Permite todos los headers
