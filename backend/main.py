@@ -267,13 +267,69 @@ async def save_case_endpoint(case: dict):
 
 
 @app.get("/api/cases")
-async def list_cases_endpoint(theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50):
+async def list_cases_endpoint(theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50, status: Optional[str] = None):
     try:
-        items = _db.list_cases(DB_PATH, theme=theme, difficulty=difficulty, limit=limit)
+        items = _db.list_cases(DB_PATH, theme=theme, difficulty=difficulty, limit=limit, status=status)
     except Exception as e:
         logger.exception("Error leyendo casos de DB")
         raise HTTPException(status_code=500, detail=str(e))
     return {"ok": True, "cases": items}
+
+
+@app.get("/api/cases/{case_id}")
+async def get_case_endpoint(case_id: int):
+    """Obtiene un caso específico por ID."""
+    try:
+        case = _db.get_case(DB_PATH, case_id)
+        if not case:
+            raise HTTPException(status_code=404, detail="Caso no encontrado")
+        return {"ok": True, "case": case}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error obteniendo caso")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/cases/{case_id}")
+async def update_case_endpoint(case_id: int, updates: dict):
+    """Actualiza un caso existente."""
+    try:
+        updated = _db.update_case(DB_PATH, case_id, updates)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Caso no encontrado")
+        return {"ok": True, "case": updated}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error actualizando caso")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/cases/{case_id}")
+async def delete_case_endpoint(case_id: int):
+    """Elimina un caso (soft delete)."""
+    try:
+        deleted = _db.delete_case(DB_PATH, case_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Caso no encontrado")
+        return {"ok": True, "message": "Caso eliminado exitosamente"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error eliminando caso")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/statistics")
+async def get_statistics_endpoint():
+    """Obtiene estadísticas de los casos para el panel de docentes."""
+    try:
+        stats = _db.get_statistics(DB_PATH)
+        return {"ok": True, "statistics": stats}
+    except Exception as e:
+        logger.exception("Error obteniendo estadísticas")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

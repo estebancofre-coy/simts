@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import TeacherPanel from './TeacherPanel'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -169,26 +170,47 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [showTeacherPanel, setShowTeacherPanel] = useState(false)
+  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || 'student')
 
   async function generateCase() {
     setLoading(true)
     setCaseObj(null)
-    setResponseText('')
+    setResponseText('⏳ Generando caso... Esto puede tomar entre 30-60 segundos.')
     const startTime = Date.now()
     
     try {
+      console.log('🚀 Iniciando generación de caso:', { theme, difficulty })
+      console.log('📡 Endpoint:', `${API_BASE}/api/simulate`)
+      
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minutos de timeout
+      
       const res = await fetch(`${API_BASE}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generate: true, theme, difficulty })
+        body: JSON.stringify({ generate: true, theme, difficulty }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
+      
+      console.log('📥 Respuesta recibida, status:', res.status)
+      
+      if (!res.ok) {
+        const errorText = await res.text()
+        throw new Error(`Error ${res.status}: ${errorText}`)
+      }
+      
       const data = await res.json()
       
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2)
       
       if (data.case) {
         setCaseObj(data.case)
+        setResponseText('')
         // Mostrar métricas en consola
+        console.log('✅ Caso generado exitosamente')
         console.log('📊 Métricas de generación:')
         console.log(`  ⏱️  Tiempo total: ${totalTime}s`)
         if (data.metrics) {
@@ -203,7 +225,14 @@ export default function App() {
       // If backend returned saved metadata, refresh history
       if (data.saved) fetchHistory()
     } catch (e) {
-      setResponseText('Error: ' + String(e))
+      console.error('❌ Error en generación:', e)
+      if (e.name === 'AbortError') {
+        setResponseText('⚠️ Error: La petición tardó demasiado (más de 2 minutos). \n\nPosibles causas:\n- El backend está procesando demasiado lento\n- Problemas de conexión con OpenAI\n- El servidor está sobrecargado\n\nIntenta de nuevo o contacta al administrador.')
+      } else if (e.message.includes('Failed to fetch')) {
+        setResponseText(`⚠️ Error de conexión: No se pudo conectar con el backend.\n\nVerifica que:\n- El backend esté ejecutándose (indicador en la esquina superior derecha)\n- Tu conexión a internet esté activa\n- Los puertos 5173 y 8000 estén accesibles\n\nError técnico: ${e.message}`)
+      } else {
+        setResponseText(`❌ Error al generar caso:\n\n${e.message}\n\nSi el problema persiste, verifica:\n- La configuración de OPENAI_API_KEY en el backend\n- Los logs del servidor backend\n- Que no haya problemas de cuota en la API de OpenAI`)
+      }
     } finally {
       setLoading(false)
     }
@@ -226,9 +255,16 @@ export default function App() {
     fetchHistory()
   }, [])
 
+  function toggleRole() {
+    const newRole = userRole === 'student' ? 'teacher' : 'student'
+    setUserRole(newRole)
+    localStorage.setItem('userRole', newRole)
+  }
+
   return (
     <>
       <HealthStatus />
+      {showTeacherPanel && <TeacherPanel onClose={() => setShowTeacherPanel(false)} />}
       <header className="app-header">
         <div className="header-content">
           <img 
@@ -377,6 +413,38 @@ export default function App() {
         )}
       </aside>
       </div>
+      
+      {/* Botón flotante para acceso docente */}
+      {userRole === 'teacher' && (
+        <button 
+          className="btn-teacher-access"
+          onClick={() => setShowTeacherPanel(true)}
+          title="Abrir panel de docentes"
+        >
+          🎓 Panel Docente
+        </button>
+      )}
+      
+      {/* Toggle de rol (solo para desarrollo/demo) */}
+      <button 
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '24px',
+          padding: '10px 16px',
+          background: 'rgba(0,0,0,0.7)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          fontSize: '12px',
+          cursor: 'pointer',
+          zIndex: 1000
+        }}
+        onClick={toggleRole}
+        title="Cambiar modo de usuario"
+      >
+        {userRole === 'student' ? '👨‍🎓 Estudiante' : '🎓 Docente'}
+      </button>
     </>
   )
 }
