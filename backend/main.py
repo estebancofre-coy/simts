@@ -1,6 +1,7 @@
 import os
 import logging
 import json
+import time
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
@@ -148,6 +149,8 @@ async def simulate(req: SimulateRequest):
 
     # Si solicita generar un caso nuevo, construimos una instrucción clara para el prompt
     if req.generate:
+        start_time = time.time()
+        
         theme = req.theme or "temas de trabajo social general"
         difficulty = (req.difficulty or "basico").lower()
         prompt_input = (
@@ -172,6 +175,8 @@ async def simulate(req: SimulateRequest):
             "Cada pregunta debe evaluar comprensión del caso, análisis crítico o aplicación de teoría.\n"
             "No incluyas texto adicional fuera del JSON."
         )
+        
+        api_start = time.time()
         try:
             resp = client.responses.create(
                 prompt={"id": PROMPT_ID, "version": "3"},
@@ -180,6 +185,9 @@ async def simulate(req: SimulateRequest):
         except Exception as e:
             logger.exception("Error llamando a OpenAI para generar caso")
             raise HTTPException(status_code=500, detail=str(e))
+        
+        api_time = time.time() - api_start
+        logger.info(f"OpenAI API call took {api_time:.2f}s")
 
         text = extract_text_from_response(resp) or ""
         # Intentamos parsear JSON del texto retornado
@@ -209,7 +217,21 @@ async def simulate(req: SimulateRequest):
             except Exception:
                 logger.exception("Error guardando caso en DB")
 
-        return {"ok": True, "case": case_obj, "saved": saved, "text": text, "raw_response": raw}
+        total_time = time.time() - start_time
+        logger.info(f"Total generation time: {total_time:.2f}s (API: {api_time:.2f}s, Processing: {total_time - api_time:.2f}s)")
+        
+        return {
+            "ok": True, 
+            "case": case_obj, 
+            "saved": saved, 
+            "text": text, 
+            "raw_response": raw,
+            "metrics": {
+                "total_time": round(total_time, 2),
+                "api_time": round(api_time, 2),
+                "processing_time": round(total_time - api_time, 2)
+            }
+        }
 
     # Si llega texto libre para analizar
     if req.case_text:

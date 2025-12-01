@@ -174,6 +174,8 @@ export default function App() {
     setLoading(true)
     setCaseObj(null)
     setResponseText('')
+    const startTime = Date.now()
+    
     try {
       const res = await fetch(`${API_BASE}/api/simulate`, {
         method: 'POST',
@@ -181,8 +183,18 @@ export default function App() {
         body: JSON.stringify({ generate: true, theme, difficulty })
       })
       const data = await res.json()
+      
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2)
+      
       if (data.case) {
         setCaseObj(data.case)
+        // Mostrar métricas en consola
+        console.log('📊 Métricas de generación:')
+        console.log(`  ⏱️  Tiempo total: ${totalTime}s`)
+        if (data.metrics) {
+          console.log(`  🤖 API OpenAI: ${data.metrics.api_time}s`)
+          console.log(`  ⚙️  Procesamiento: ${data.metrics.processing_time}s`)
+        }
       } else if (data.text) {
         setResponseText(data.text)
       } else {
