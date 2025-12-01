@@ -154,25 +154,38 @@ async def simulate(req: SimulateRequest):
         theme = req.theme or "temas de trabajo social general"
         difficulty = (req.difficulty or "basico").lower()
         prompt_input = (
-            f"Genera un caso clínico educativo para estudiantes de Trabajo Social. "
+            f"Genera un caso clínico educativo DETALLADO Y EXTENSO para estudiantes de Trabajo Social. "
             f"Tema: {theme}. Nivel de dificultad: {difficulty}.\n\n"
             "Entrega la respuesta estrictamente en JSON con las siguientes claves:\n"
             "- 'case_id' (string corto único)\n"
-            "- 'title' (string, título del caso)\n"
-            "- 'description' (texto descriptivo del caso, contexto, situación)\n"
-            "- 'learning_objectives' (array de strings, objetivos de aprendizaje)\n"
+            "- 'title' (string, título descriptivo del caso)\n"
+            "- 'description' (texto EXTENSO Y DETALLADO del caso, MÍNIMO 800-1200 palabras, que incluya):\n"
+            "  * Presentación del caso con datos demográficos completos\n"
+            "  * Historia social y familiar detallada (estructura familiar, relaciones, dinámicas)\n"
+            "  * Contexto socioeconómico y cultural (vivienda, ingresos, redes de apoyo)\n"
+            "  * Antecedentes relevantes (educativos, laborales, de salud, legales si aplica)\n"
+            "  * Situación problemática actual con descripción exhaustiva\n"
+            "  * Factores de riesgo y factores protectores identificables\n"
+            "  * Recursos comunitarios e institucionales disponibles\n"
+            "  * Aspectos emocionales y relacionales del caso\n"
+            "  * Dilemas éticos o desafíos profesionales implícitos\n"
+            "  * Información suficiente para análisis profundo del caso\n"
+            "- 'learning_objectives' (array de strings, 4-6 objetivos de aprendizaje específicos)\n"
             "- 'questions' (array de objetos con este formato exacto):\n"
             "  [\n"
             "    {\n"
             '      "question": "¿Pregunta sobre el caso?",\n'
             '      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],\n'
             '      "correct_index": 0,  // índice de la respuesta correcta (0-3)\n'
-            '      "justification": "Explicación de por qué esta es la respuesta correcta"\n'
+            '      "justification": "Explicación detallada de por qué esta es la respuesta correcta"\n'
             "    }\n"
             "  ]\n"
-            "- 'suggested_interventions' (array de strings, intervenciones sugeridas)\n\n"
-            "IMPORTANTE: Genera entre 3-5 preguntas de selección múltiple con 4 alternativas cada una. "
-            "Cada pregunta debe evaluar comprensión del caso, análisis crítico o aplicación de teoría.\n"
+            "- 'suggested_interventions' (array de strings, 5-8 intervenciones específicas y justificadas)\n\n"
+            "IMPORTANTE: \n"
+            "1. La descripción debe ser narrativa, realista y lo suficientemente rica en detalles para permitir análisis complejo.\n"
+            "2. Genera entre 4-6 preguntas de selección múltiple con 4 alternativas cada una.\n"
+            "3. Cada pregunta debe evaluar: comprensión del caso, análisis crítico, aplicación de teoría, o toma de decisiones éticas.\n"
+            "4. Las intervenciones deben ser específicas al caso, fundamentadas teóricamente y priorizadas.\n"
             "No incluyas texto adicional fuera del JSON."
         )
         
