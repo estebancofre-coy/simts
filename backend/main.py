@@ -51,6 +51,23 @@ except Exception:
     logger.exception("No se pudo inicializar la base de datos")
 
 
+@app.get("/")
+async def root():
+    """Endpoint raíz - redirige a documentación."""
+    return {
+        "message": "SimTS Backend API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/health",
+        "endpoints": {
+            "health_check": "/api/health",
+            "simulate": "/api/simulate",
+            "list_cases": "/api/cases",
+            "save_case": "/api/cases"
+        }
+    }
+
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint para verificar que el backend está funcionando."""
