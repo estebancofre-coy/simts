@@ -4,6 +4,7 @@ import json
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import db as _db
@@ -41,6 +42,19 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = ClientWrapper(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
+
+# Configurar CORS para permitir peticiones desde el frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",  # Desarrollo local
+        "https://*.vercel.app",   # Cualquier dominio de Vercel
+        "https://simts-frontend*.vercel.app",  # Tu frontend específico
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],  # Permite GET, POST, etc.
+    allow_headers=["*"],  # Permite todos los headers
+)
 
 # Inicializar DB de persistencia
 DB_PATH = os.getenv("SIMTS_DB_PATH") or os.path.join(os.path.dirname(__file__), "cases.db")
