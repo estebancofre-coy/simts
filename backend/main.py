@@ -180,6 +180,21 @@ async def simulate(req: SimulateRequest):
             }
             context_parts.append(f"Contexto: {context_map.get(req.context, req.context)}")
         
+        # Información geográfica de la Región de Aysén
+        region_info = (
+            "\n\nIMPORTANTE - Contexto Geográfico de la Región de Aysén:\n"
+            "El caso debe situarse en la Región de Aysén, Chile. Distribuye las ubicaciones considerando:\n"
+            "- Coyhaique (capital regional, ~60% población): Centro urbano principal, mayor acceso a servicios\n"
+            "- Puerto Aysén (~30% población): Puerto y centro industrial, conectado a Coyhaique\n"
+            "- Otras comunas (~10%): Chile Chico, Cochrane, Puerto Cisnes, Lago Verde, Río Ibáñez, "
+            "O'Higgins, Tortel, Guaitecas (zonas aisladas, rurales, menor acceso a servicios)\n"
+            "Usa estas localidades para dar realismo y variedad. Considera las características de cada zona:\n"
+            "- Acceso a servicios (hospitales, escuelas, centros comunitarios)\n"
+            "- Conectividad y distancias (algunas comunas muy aisladas)\n"
+            "- Actividades económicas (pesca, ganadería, turismo)\n"
+            "- Clima y geografía (inviernos duros, caminos cortados por nieve/lluvia)\n"
+        )
+        
         if req.focus_area:
             focus_map = {
                 'diagnostico': 'enfocado en diagnóstico y evaluación inicial',
@@ -202,7 +217,8 @@ async def simulate(req: SimulateRequest):
         
         prompt_input = (
             f"Genera un caso clínico educativo para estudiantes de Trabajo Social.\n"
-            f"{'. '.join(context_parts)}.\n\n"
+            f"{'. '.join(context_parts)}.\n"
+            f"{region_info}\n"
             "Entrega la respuesta estrictamente en JSON con las siguientes claves:\n"
             "- 'case_id' (string corto único)\n"
             "- 'title' (string, título descriptivo del caso)\n"
