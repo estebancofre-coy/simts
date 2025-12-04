@@ -95,6 +95,12 @@ class SimulateRequest(BaseModel):
     generate: Optional[bool] = False
     theme: Optional[str] = None
     difficulty: Optional[str] = None  # 'basico'|'intermedio'|'avanzado'
+    
+    # Nuevos parámetros para mayor control
+    age_group: Optional[str] = None  # 'niñez'|'adolescencia'|'adulto'|'adulto_mayor'
+    context: Optional[str] = None  # 'urbano'|'rural'|'institucional'
+    case_length: Optional[str] = None  # 'corto'|'medio'|'extenso'
+    focus_area: Optional[str] = None  # 'diagnostico'|'intervencion'|'evaluacion'|'completo'
 
     # Alternativamente, si se provee `case_text`, se puede usar para analizar/consultar.
     case_id: Optional[str] = None
@@ -153,39 +159,80 @@ async def simulate(req: SimulateRequest):
         
         theme = req.theme or "temas de trabajo social general"
         difficulty = (req.difficulty or "basico").lower()
+        
+        # Construir contexto adicional basado en los nuevos parámetros
+        context_parts = [f"Tema: {theme}", f"Nivel de dificultad: {difficulty}"]
+        
+        if req.age_group:
+            age_map = {
+                'niñez': 'niños (0-12 años)',
+                'adolescencia': 'adolescentes (13-17 años)',
+                'adulto': 'adultos (18-64 años)',
+                'adulto_mayor': 'adultos mayores (65+ años)'
+            }
+            context_parts.append(f"Grupo etario: {age_map.get(req.age_group, req.age_group)}")
+        
+        if req.context:
+            context_map = {
+                'urbano': 'contexto urbano/ciudad',
+                'rural': 'contexto rural/campo',
+                'institucional': 'contexto institucional (hospital, escuela, centro comunitario)'
+            }
+            context_parts.append(f"Contexto: {context_map.get(req.context, req.context)}")
+        
+        if req.focus_area:
+            focus_map = {
+                'diagnostico': 'enfocado en diagnóstico y evaluación inicial',
+                'intervencion': 'enfocado en diseño e implementación de intervenciones',
+                'evaluacion': 'enfocado en evaluación de resultados',
+                'completo': 'abarcando todo el proceso (diagnóstico, intervención y evaluación)'
+            }
+            context_parts.append(f"Énfasis: {focus_map.get(req.focus_area, req.focus_area)}")
+        
+        length_instruction = ""
+        if req.case_length:
+            length_map = {
+                'corto': 'Descripción breve en 2-3 párrafos (150-250 palabras)',
+                'medio': 'Descripción moderada en 3-4 párrafos (300-450 palabras)',
+                'extenso': 'Descripción detallada en 5-6 párrafos (600-800 palabras)'
+            }
+            length_instruction = f"\n{length_map.get(req.case_length, 'Descripción moderada en 3-4 párrafos')}"
+        else:
+            length_instruction = "\nDescripción moderada en 3-4 párrafos (300-450 palabras)"
+        
         prompt_input = (
-            f"Genera un caso clínico educativo DETALLADO Y EXTENSO para estudiantes de Trabajo Social. "
-            f"Tema: {theme}. Nivel de dificultad: {difficulty}.\n\n"
+            f"Genera un caso clínico educativo para estudiantes de Trabajo Social.\n"
+            f"{'. '.join(context_parts)}.\n\n"
             "Entrega la respuesta estrictamente en JSON con las siguientes claves:\n"
             "- 'case_id' (string corto único)\n"
             "- 'title' (string, título descriptivo del caso)\n"
-            "- 'description' (texto EXTENSO Y DETALLADO del caso, MÍNIMO 800-1200 palabras, que incluya):\n"
-            "  * Presentación del caso con datos demográficos completos\n"
-            "  * Historia social y familiar detallada (estructura familiar, relaciones, dinámicas)\n"
-            "  * Contexto socioeconómico y cultural (vivienda, ingresos, redes de apoyo)\n"
-            "  * Antecedentes relevantes (educativos, laborales, de salud, legales si aplica)\n"
-            "  * Situación problemática actual con descripción exhaustiva\n"
-            "  * Factores de riesgo y factores protectores identificables\n"
-            "  * Recursos comunitarios e institucionales disponibles\n"
-            "  * Aspectos emocionales y relacionales del caso\n"
-            "  * Dilemas éticos o desafíos profesionales implícitos\n"
-            "  * Información suficiente para análisis profundo del caso\n"
-            "- 'learning_objectives' (array de strings, 4-6 objetivos de aprendizaje específicos)\n"
-            "- 'questions' (array de objetos con este formato exacto):\n"
+            f"- 'description' (texto narrativo del caso dividido en párrafos CLARAMENTE SEPARADOS.{length_instruction}.\n"
+            "  IMPORTANTE: Cada párrafo debe estar separado por DOBLE salto de línea (\\n\\n).\n"
+            "  Estructura sugerida de párrafos:\n"
+            "  1. Presentación: datos demográficos, composición familiar\n"
+            "  2. Contexto: situación socioeconómica, vivienda, redes\n"
+            "  3. Problemática: descripción de la situación actual\n"
+            "  4. Factores: riesgos y protectores identificables\n"
+            "  5. (Opcional) Recursos e historia relevante adicional)\n"
+            "- 'learning_objectives' (array de 3-4 strings, objetivos de aprendizaje específicos)\n"
+            "- 'questions' (array de 3-4 objetos con este formato exacto):\n"
             "  [\n"
             "    {\n"
             '      "question": "¿Pregunta sobre el caso?",\n'
             '      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],\n'
             '      "correct_index": 0,  // índice de la respuesta correcta (0-3)\n'
-            '      "justification": "Explicación detallada de por qué esta es la respuesta correcta"\n'
+            '      "justification": "Explicación clara de por qué esta es correcta y las otras no"\n'
             "    }\n"
             "  ]\n"
-            "- 'suggested_interventions' (array de strings, 5-8 intervenciones específicas y justificadas)\n\n"
-            "IMPORTANTE: \n"
-            "1. La descripción debe ser narrativa, realista y lo suficientemente rica en detalles para permitir análisis complejo.\n"
-            "2. Genera entre 4-6 preguntas de selección múltiple con 4 alternativas cada una.\n"
-            "3. Cada pregunta debe evaluar: comprensión del caso, análisis crítico, aplicación de teoría, o toma de decisiones éticas.\n"
-            "4. Las intervenciones deben ser específicas al caso, fundamentadas teóricamente y priorizadas.\n"
+            "- 'suggested_interventions' (array de 4-5 strings, intervenciones específicas y aplicables)\n\n"
+            "CRÍTICO sobre el formato:\n"
+            "- DEBES usar \\n\\n (doble salto de línea) para separar cada párrafo en la descripción\n"
+            "- Cada párrafo debe tener entre 50-100 palabras\n"
+            "- NO escribas todo en un solo bloque de texto\n\n"
+            "IMPORTANTE sobre las preguntas:\n"
+            "- Cada pregunta evalúa: comprensión, análisis crítico o aplicación de teoría\n"
+            "- Opciones incorrectas deben ser plausibles pero claramente diferenciables\n"
+            "- Justificaciones deben explicar por qué la correcta es apropiada Y por qué las otras no\n\n"
             "No incluyas texto adicional fuera del JSON."
         )
         

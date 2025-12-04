@@ -160,12 +160,48 @@ const THEMES = [
   'Violencia intrafamiliar',
   'Adulto mayor',
   'Migración y multiculturalidad',
-  'Reinserción social'
+  'Reinserción social',
+  'Discapacidad e inclusión',
+  'Pobreza y vulnerabilidad social',
+  'Adicciones'
+]
+
+const AGE_GROUPS = [
+  { value: '', label: 'Sin especificar' },
+  { value: 'niñez', label: 'Niñez (0-12 años)' },
+  { value: 'adolescencia', label: 'Adolescencia (13-17 años)' },
+  { value: 'adulto', label: 'Adulto (18-64 años)' },
+  { value: 'adulto_mayor', label: 'Adulto Mayor (65+ años)' }
+]
+
+const CONTEXTS = [
+  { value: '', label: 'Sin especificar' },
+  { value: 'urbano', label: 'Urbano' },
+  { value: 'rural', label: 'Rural' },
+  { value: 'institucional', label: 'Institucional' }
+]
+
+const FOCUS_AREAS = [
+  { value: '', label: 'Sin especificar' },
+  { value: 'diagnostico', label: 'Diagnóstico' },
+  { value: 'intervencion', label: 'Intervención' },
+  { value: 'evaluacion', label: 'Evaluación' },
+  { value: 'completo', label: 'Proceso completo' }
+]
+
+const CASE_LENGTHS = [
+  { value: 'corto', label: 'Corto (2-3 párrafos)' },
+  { value: 'medio', label: 'Medio (3-4 párrafos)' },
+  { value: 'extenso', label: 'Extenso (5-6 párrafos)' }
 ]
 
 export default function App() {
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
+  const [ageGroup, setAgeGroup] = useState('')
+  const [context, setContext] = useState('')
+  const [focusArea, setFocusArea] = useState('')
+  const [caseLength, setCaseLength] = useState('medio')
   const [caseObj, setCaseObj] = useState(null)
   const [responseText, setResponseText] = useState('')
   const [loading, setLoading] = useState(false)
@@ -365,7 +401,9 @@ export default function App() {
             )}
             
             <div className="case-description">
-              <p>{caseObj.description || caseObj.text}</p>
+              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8' }}>
+                {caseObj.description || caseObj.text}
+              </div>
             </div>
 
           {/* Objetivos / checklist */}
