@@ -9,7 +9,7 @@ export default function Landing() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header/Navigation */}
       <header style={{
-        backgroundColor: '#1a472a',
+        backgroundColor: '#003d6b',
         color: 'white',
         padding: '1rem 0',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
@@ -33,7 +33,7 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section id="inicio" style={{
-        background: 'linear-gradient(135deg, #1a472a 0%, #2d6b45 100%)',
+        background: 'linear-gradient(135deg, #003d6b 0%, #005a9e 100%)',
         color: 'white',
         padding: '4rem 2rem',
         textAlign: 'center'
@@ -87,7 +87,7 @@ export default function Landing() {
               style={{
                 padding: '1rem 2rem',
                 fontSize: '1rem',
-                backgroundColor: '#2196F3',
+                backgroundColor: '#005a9e',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -97,12 +97,12 @@ export default function Landing() {
                 transition: 'all 0.3s'
               }}
               onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#0b7dda'
+                e.target.style.backgroundColor = '#003d6b'
                 e.target.style.transform = 'translateY(-2px)'
                 e.target.style.boxShadow = '0 6px 8px rgba(0,0,0,0.3)'
               }}
               onMouseOut={(e) => {
-                e.target.style.backgroundColor = '#2196F3'
+                e.target.style.backgroundColor = '#005a9e'
                 e.target.style.transform = 'translateY(0)'
                 e.target.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)'
               }}
@@ -119,7 +119,7 @@ export default function Landing() {
         backgroundColor: '#f5f5f5'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#1a472a' }}>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#003d6b' }}>
             ¿Por Qué SimTS?
           </h2>
           
@@ -174,7 +174,7 @@ export default function Landing() {
                 }}
               >
                 <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{item.icon}</div>
-                <h3 style={{ marginBottom: '0.5rem', color: '#1a472a' }}>{item.title}</h3>
+                <h3 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>{item.title}</h3>
                 <p style={{ color: '#666', lineHeight: '1.6' }}>{item.desc}</p>
               </div>
             ))}
@@ -188,7 +188,7 @@ export default function Landing() {
         backgroundColor: 'white'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#1a472a' }}>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#003d6b' }}>
             Guía de Uso
           </h2>
           
@@ -200,7 +200,7 @@ export default function Landing() {
               borderRadius: '8px',
               border: '2px solid #4CAF50'
             }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#1a472a' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#003d6b' }}>
                 👨‍🎓 Para Estudiantes
               </h3>
               <ol style={{ lineHeight: '2' }}>
@@ -219,9 +219,9 @@ export default function Landing() {
               backgroundColor: '#fff0f7',
               padding: '2rem',
               borderRadius: '8px',
-              border: '2px solid #2196F3'
+              border: '2px solid #005a9e'
             }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#1a472a' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: '#003d6b' }}>
                 👨‍🏫 Para Académicos/Docentes
               </h3>
               <ol style={{ lineHeight: '2' }}>
@@ -244,7 +244,7 @@ export default function Landing() {
         backgroundColor: '#f5f5f5'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#1a472a' }}>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#003d6b' }}>
             Tecnología & Infraestructura
           </h2>
           
@@ -273,7 +273,7 @@ export default function Landing() {
                 borderRadius: '8px',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}>
-                <h3 style={{ marginBottom: '1.5rem', color: '#1a472a' }}>{section.category}</h3>
+                <h3 style={{ marginBottom: '1.5rem', color: '#003d6b' }}>{section.category}</h3>
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   {section.items.map((item, i) => (
                     <li key={i} style={{ 
@@ -298,7 +298,7 @@ export default function Landing() {
             borderRadius: '8px',
             border: '1px solid #ddd'
           }}>
-            <h3 style={{ marginBottom: '1rem', color: '#1a472a' }}>🎨 Características Técnicas</h3>
+            <h3 style={{ marginBottom: '1rem', color: '#003d6b' }}>🎨 Características Técnicas</h3>
             <ul style={{ lineHeight: '1.8', color: '#666' }}>
               <li><strong>Generación de Casos:</strong> Basada en OpenAI Prompt API con parámetros contextualizados para la Región de Aysén</li>
               <li><strong>Base de Datos:</strong> SQLite con tablas para estudiantes, casos, sesiones y respuestas</li>
@@ -316,14 +316,14 @@ export default function Landing() {
         backgroundColor: 'white'
       }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#1a472a' }}>
+          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#003d6b' }}>
             Contacto & Soporte
           </h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '2rem' }}>
             {/* Formulario */}
             <div>
-              <h3 style={{ marginBottom: '1.5rem', color: '#1a472a' }}>Envíanos un Mensaje</h3>
+              <h3 style={{ marginBottom: '1.5rem', color: '#003d6b' }}>Envíanos un Mensaje</h3>
               <form style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <input
                   type="text"
@@ -374,7 +374,7 @@ export default function Landing() {
                   type="submit"
                   style={{
                     padding: '0.75rem',
-                    backgroundColor: '#1a472a',
+                    backgroundColor: '#003d6b',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
@@ -384,10 +384,10 @@ export default function Landing() {
                     transition: 'all 0.3s'
                   }}
                   onMouseOver={(e) => {
-                    e.target.style.backgroundColor = '#2d6b45'
+                    e.target.style.backgroundColor = '#005a9e'
                   }}
                   onMouseOut={(e) => {
-                    e.target.style.backgroundColor = '#1a472a'
+                    e.target.style.backgroundColor = '#003d6b'
                   }}
                 >
                   Enviar Mensaje
@@ -397,7 +397,7 @@ export default function Landing() {
 
             {/* Información de Contacto */}
             <div>
-              <h3 style={{ marginBottom: '1.5rem', color: '#1a472a' }}>Información de Contacto</h3>
+              <h3 style={{ marginBottom: '1.5rem', color: '#003d6b' }}>Información de Contacto</h3>
               
               <div style={{ 
                 backgroundColor: '#f5f5f5', 
@@ -405,10 +405,10 @@ export default function Landing() {
                 borderRadius: '8px',
                 marginBottom: '1.5rem'
               }}>
-                <h4 style={{ marginBottom: '0.5rem', color: '#1a472a' }}>📧 Email</h4>
+                <h4 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>📧 Email</h4>
                 <p style={{ margin: 0, color: '#666' }}>
-                  <a href="mailto:trabajo.social@uaysen.cl" style={{ color: '#2196F3', textDecoration: 'none' }}>
-                    trabajo.social@uaysen.cl
+                  <a href="mailto:esteban.cofre@uaysen.cl" style={{ color: '#005a9e', textDecoration: 'none' }}>
+                    esteban.cofre@uaysen.cl
                   </a>
                 </p>
               </div>
@@ -419,7 +419,7 @@ export default function Landing() {
                 borderRadius: '8px',
                 marginBottom: '1.5rem'
               }}>
-                <h4 style={{ marginBottom: '0.5rem', color: '#1a472a' }}>📞 Teléfono</h4>
+                <h4 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>📞 Teléfono</h4>
                 <p style={{ margin: 0, color: '#666' }}>+56 9 3933 2051</p>
               </div>
 
@@ -429,10 +429,9 @@ export default function Landing() {
                 borderRadius: '8px',
                 marginBottom: '1.5rem'
               }}>
-                <h4 style={{ marginBottom: '0.5rem', color: '#1a472a' }}>📍 Ubicación</h4>
+                <h4 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>📍 Ubicación</h4>
                 <p style={{ margin: 0, color: '#666' }}>
-                  Casa Central<br/>
-                  Calle Lord Cochrane 335<br/>
+                  Bilbao 449<br/>
                   Coyhaique, Región de Aysén
                 </p>
               </div>
@@ -442,7 +441,7 @@ export default function Landing() {
                 padding: '1.5rem', 
                 borderRadius: '8px'
               }}>
-                <h4 style={{ marginBottom: '0.5rem', color: '#1a472a' }}>🕒 Horario</h4>
+                <h4 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>🕒 Horario</h4>
                 <p style={{ margin: 0, color: '#666' }}>
                   Lunes a Viernes<br/>
                   09:00 - 17:00 hrs<br/>
@@ -456,7 +455,7 @@ export default function Landing() {
 
       {/* Footer */}
       <footer style={{
-        backgroundColor: '#1a472a',
+        backgroundColor: '#003d6b',
         color: 'white',
         padding: '2rem',
         marginTop: 'auto'

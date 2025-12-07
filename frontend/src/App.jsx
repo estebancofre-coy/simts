@@ -224,7 +224,7 @@ const CASE_LENGTHS = [
   { value: 'extenso', label: 'Extenso (6 párrafos)' }
 ]
 
-export default function App() {
+export default function App({ onLogout }) {
   const navigate = useNavigate()
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
@@ -510,7 +510,7 @@ export default function App() {
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button
-              onClick={() => navigate('/')}
+              onClick={() => onLogout && onLogout()}
               style={{
                 padding: '0.5rem 1rem',
                 border: 'none',
