@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import TeacherPanel from './TeacherPanel'
 import LoginModal from './LoginModal'
 import StudentLoginModal from './StudentLoginModal'
@@ -224,6 +225,7 @@ const CASE_LENGTHS = [
 ]
 
 export default function App() {
+  const navigate = useNavigate()
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
   const [ageGroup, setAgeGroup] = useState('')
@@ -495,16 +497,33 @@ export default function App() {
       )}
       <header className="app-header">
         <div className="header-content">
-          <img 
-            src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png" 
-            alt="Logo Trabajo Social" 
-            className="header-logo"
-          />
-          <div className="header-text">
-            <h1>Simulador de Casos </h1>
-            <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysén</p>
+          <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => navigate('/')}>
+            <img 
+              src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png" 
+              alt="Logo Trabajo Social" 
+              className="header-logo"
+            />
+            <div className="header-text">
+              <h1>Simulador de Casos </h1>
+              <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysén</p>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <button
+              onClick={() => navigate('/')}
+              style={{
+                padding: '0.5rem 1rem',
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: '#666',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                marginRight: '0.5rem'
+              }}
+            >
+              ← Ir a Inicio
+            </button>
             {isStudentAuthenticated ? (
               <>
                 <span style={{ fontSize: '0.9rem', color: '#666' }}>
