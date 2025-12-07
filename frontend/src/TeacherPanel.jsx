@@ -598,8 +598,8 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
   }
 
   return (
-    <div className="teacher-panel-overlay">
-      <div className="teacher-panel">
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+      <div className="teacher-panel" style={{ maxWidth: '100%', margin: 0, borderRadius: 0, height: '100vh', overflow: 'auto' }}>
         <div className="panel-header">
           <div>
             <h2>🎓 Panel de Docentes</h2>
@@ -609,32 +609,8 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
             <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
               🚪 Salir
             </button>
-            <button className="btn-close" onClick={onClose}>✕</button>
           </div>
         </div>
-
-          {activeCase && Object.keys(openAnswers || {}).length > 0 && (
-            <div className="panel-card" style={{ marginBottom: 16 }}>
-              <h4 style={{ marginBottom: 8 }}>📝 Respuestas abiertas (sesión actual)</h4>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>
-                Caso activo: <strong>{activeCase.title || activeCase.case_id || 'Sin título'}</strong>
-              </div>
-              <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
-                {Object.entries(openAnswers).map(([idx, text]) => {
-                  const qIndex = Number(idx)
-                  const q = (activeCase.questions || [])[qIndex]
-                  return (
-                    <li key={idx} style={{ marginBottom: 10, padding: 10, background: '#f7f7f7', borderRadius: 6 }}>
-                      <div style={{ fontWeight: 'bold', marginBottom: 6 }}>
-                        Pregunta {qIndex + 1}: {q?.question || q?.text || 'Pregunta abierta'}
-                      </div>
-                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{text || 'Sin respuesta'}</div>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )}
 
         <div className="panel-nav">
           <button 

@@ -537,14 +537,18 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
           onCancel={() => setShowStudentLogin(false)}
         />
       )}
-      {showTeacherPanel && isAuthenticated && (
+      
+      {/* Si es docente autenticado, mostrar solo el panel docente */}
+      {isAuthenticated && !isStudentAuthenticated ? (
         <TeacherPanel 
-          onClose={() => setShowTeacherPanel(false)}
+          onClose={() => {}}
           onLogout={handleLogout}
-          openAnswers={openAnswers}
-          activeCase={caseObj}
+          openAnswers={{}}
+          activeCase={null}
         />
-      )}
+      ) : (
+        /* Interfaz de estudiante */
+        <>
       <header className="app-header">
         <div className="header-content">
           <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => navigate('/')}>
@@ -1086,13 +1090,17 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
       </div>
       
       {/* Botón flotante para acceso docente */}
-      <button 
-        className="btn-teacher-access"
-        onClick={attemptOpenPanel}
-        title="Acceso panel de docentes"
-      >
-        🎓 Panel Docente
-      </button>
+      {!isAuthenticated && (
+        <button 
+          className="btn-teacher-access"
+          onClick={attemptOpenPanel}
+          title="Acceso panel de docentes"
+        >
+          🎓 Panel Docente
+        </button>
+      )}
+      </>
+      )}
     </>
   )
 }
