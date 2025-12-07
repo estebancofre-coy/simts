@@ -53,6 +53,49 @@ def init_db(db_path: str):
     )
     """)
     
+    # Tabla de estudiantes
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        name TEXT,
+        email TEXT,
+        created_at TEXT,
+        status TEXT DEFAULT 'active'
+    )
+    """)
+    
+    # Tabla de sesiones de estudiantes (cada vez que trabajan con un caso)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS student_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        student_id INTEGER NOT NULL,
+        case_id INTEGER NOT NULL,
+        created_at TEXT,
+        submitted_at TEXT,
+        duration_seconds INTEGER,
+        FOREIGN KEY (student_id) REFERENCES students(id),
+        FOREIGN KEY (case_id) REFERENCES cases(id)
+    )
+    """)
+    
+    # Tabla de respuestas (alternativas y abiertas)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS student_answers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        question_index INTEGER NOT NULL,
+        selected_option INTEGER,
+        open_answer TEXT,
+        is_correct INTEGER,
+        feedback TEXT,
+        score REAL,
+        created_at TEXT,
+        FOREIGN KEY (session_id) REFERENCES student_sessions(id)
+    )
+    """)
+    
     # Migración: agregar columnas si no existen
     try:
         cur.execute("ALTER TABLE cases ADD COLUMN updated_at TEXT")
@@ -75,6 +118,19 @@ def init_db(db_path: str):
     except sqlite3.OperationalError:
         pass
     conn.commit()
+    
+    # Insertar estudiante de prueba si no existe
+    cur.execute("SELECT COUNT(*) FROM students WHERE username = ?", ("estudiante1",))
+    if cur.fetchone()[0] == 0:
+        # Password hash simple para demo (en producción usar bcrypt)
+        import hashlib
+        pw_hash = hashlib.sha256("pass".encode()).hexdigest()
+        cur.execute(
+            "INSERT INTO students (username, password_hash, name, created_at, status) VALUES (?, ?, ?, ?, ?)",
+            ("estudiante1", pw_hash, "Estudiante Demo", datetime.utcnow().isoformat(), "active")
+        )
+        conn.commit()
+    
     conn.close()
 
 
@@ -481,3 +537,173 @@ def delete_collection(db_path: str, collection_id: int) -> bool:
     conn.commit()
     conn.close()
     return affected > 0
+
+
+# --- Student authentication and answers ---
+
+def authenticate_student(db_path: str, username: str, password: str) -> Optional[Dict]:
+    """Autentica estudiante y devuelve su info si el password es correcto."""
+    import hashlib
+    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, username, name, email, created_at, status FROM students WHERE username = ? AND password_hash = ? AND status = 'active'",
+        (username, pw_hash)
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "username": row[1],
+        "name": row[2],
+        "email": row[3],
+        "created_at": row[4],
+        "status": row[5]
+    }
+
+
+def create_session(db_path: str, student_id: int, case_id: int) -> int:
+    """Crea una sesión de estudiante para un caso y devuelve el session_id."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    created_at = datetime.utcnow().isoformat()
+    cur.execute(
+        "INSERT INTO student_sessions (student_id, case_id, created_at) VALUES (?,?,?)",
+        (student_id, case_id, created_at)
+    )
+    conn.commit()
+    session_id = cur.lastrowid
+    conn.close()
+    return session_id
+
+
+def submit_session(db_path: str, session_id: int, duration_seconds: Optional[int] = None):
+    """Marca una sesión como enviada."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    submitted_at = datetime.utcnow().isoformat()
+    cur.execute(
+        "UPDATE student_sessions SET submitted_at = ?, duration_seconds = ? WHERE id = ?",
+        (submitted_at, duration_seconds, session_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def save_answer(db_path: str, session_id: int, question_index: int, selected_option: Optional[int], open_answer: Optional[str], is_correct: Optional[int] = None) -> int:
+    """Guarda una respuesta de estudiante."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    created_at = datetime.utcnow().isoformat()
+    cur.execute(
+        "INSERT INTO student_answers (session_id, question_index, selected_option, open_answer, is_correct, created_at) VALUES (?,?,?,?,?,?)",
+        (session_id, question_index, selected_option, open_answer, is_correct, created_at)
+    )
+    conn.commit()
+    answer_id = cur.lastrowid
+    conn.close()
+    return answer_id
+
+
+def get_session_answers(db_path: str, session_id: int) -> List[Dict]:
+    """Obtiene todas las respuestas de una sesión."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, question_index, selected_option, open_answer, is_correct, feedback, score, created_at FROM student_answers WHERE session_id = ? ORDER BY question_index",
+        (session_id,)
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "id": r[0],
+            "question_index": r[1],
+            "selected_option": r[2],
+            "open_answer": r[3],
+            "is_correct": r[4],
+            "feedback": r[5],
+            "score": r[6],
+            "created_at": r[7]
+        }
+        for r in rows
+    ]
+
+
+def get_student_sessions(db_path: str, student_id: Optional[int] = None, case_id: Optional[int] = None, limit: int = 100) -> List[Dict]:
+    """Obtiene sesiones filtradas por estudiante o caso."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    query = """
+        SELECT s.id, s.student_id, st.username, st.name, s.case_id, c.title, s.created_at, s.submitted_at, s.duration_seconds
+        FROM student_sessions s
+        JOIN students st ON s.student_id = st.id
+        LEFT JOIN cases c ON s.case_id = c.id
+        WHERE 1=1
+    """
+    params = []
+    if student_id:
+        query += " AND s.student_id = ?"
+        params.append(student_id)
+    if case_id:
+        query += " AND s.case_id = ?"
+        params.append(case_id)
+    query += " ORDER BY s.created_at DESC LIMIT ?"
+    params.append(limit)
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "session_id": r[0],
+            "student_id": r[1],
+            "student_username": r[2],
+            "student_name": r[3],
+            "case_id": r[4],
+            "case_title": r[5],
+            "created_at": r[6],
+            "submitted_at": r[7],
+            "duration_seconds": r[8]
+        }
+        for r in rows
+    ]
+
+
+def update_answer_feedback(db_path: str, answer_id: int, feedback: str, score: Optional[float] = None) -> bool:
+    """Actualiza el feedback y score de una respuesta."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE student_answers SET feedback = ?, score = ? WHERE id = ?",
+        (feedback, score, answer_id)
+    )
+    conn.commit()
+    affected = cur.rowcount
+    conn.close()
+    return affected > 0
+
+
+def list_students(db_path: str, status: str = 'active') -> List[Dict]:
+    """Lista estudiantes."""
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id, username, name, email, created_at, status FROM students WHERE status = ? ORDER BY name",
+        (status,)
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [
+        {
+            "id": r[0],
+            "username": r[1],
+            "name": r[2],
+            "email": r[3],
+            "created_at": r[4],
+            "status": r[5]
+        }
+        for r in rows
+    ]

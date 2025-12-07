@@ -97,10 +97,11 @@ class SimulateRequest(BaseModel):
     difficulty: Optional[str] = None  # 'basico'|'intermedio'|'avanzado'
     
     # Nuevos parámetros para mayor control
-    age_group: Optional[str] = None  # 'niñez'|'adolescencia'|'adulto'|'adulto_mayor'
-    context: Optional[str] = None  # 'urbano'|'rural'|'institucional'
+    age_group: Optional[str] = None  # 'primera_infancia'|'niñez'|'adolescencia'|'adultez'|'adulto_mayor'
+    context: Optional[str] = None  # 'urbano'|'rural'|'rural_extremo'
     case_length: Optional[str] = None  # 'corto'|'medio'|'extenso'
-    focus_area: Optional[str] = None  # 'diagnostico'|'intervencion'|'evaluacion'|'completo'
+    focus_area: Optional[str] = None  # 'derechos_humanos'|'enfoque_genero'|'determinantes_sociales'|'comunitario'|'sistemico_familiar'
+    competency: Optional[str] = None  # 'diagnostico_social'|'diseño_intervencion'|'articulacion_redes'|'entrevista_vinculacion'|'evaluacion'
 
     # Alternativamente, si se provee `case_text`, se puede usar para analizar/consultar.
     case_id: Optional[str] = None
@@ -160,97 +161,79 @@ async def simulate(req: SimulateRequest):
         theme = req.theme or "temas de trabajo social general"
         difficulty = (req.difficulty or "basico").lower()
         
-        # Construir contexto adicional basado en los nuevos parámetros
-        context_parts = [f"Tema: {theme}", f"Nivel de dificultad: {difficulty}"]
+        # MAPEO DE PARÁMETROS FRONTEND -> PROMPT
+        # Mapeo de grupo etario
+        age_group_map = {
+            'primera_infancia': 'primera infancia',
+            'niñez': 'niñez',
+            'adolescencia': 'adolescencia',
+            'adultez': 'adultez',
+            'adulto_mayor': 'adulto mayor'
+        }
+        age_group_str = age_group_map.get(req.age_group, req.age_group) if req.age_group else None
         
-        if req.age_group:
-            age_map = {
-                'niñez': 'niños (0-12 años)',
-                'adolescencia': 'adolescentes (13-17 años)',
-                'adulto': 'adultos (18-64 años)',
-                'adulto_mayor': 'adultos mayores (65+ años)'
-            }
-            context_parts.append(f"Grupo etario: {age_map.get(req.age_group, req.age_group)}")
+        # Mapeo de contexto territorial
+        context_map = {
+            'urbano': 'urbano',
+            'rural': 'rural',
+            'rural_extremo': 'rural extremo'
+        }
+        context_str = context_map.get(req.context, req.context) if req.context else None
         
-        if req.context:
-            context_map = {
-                'urbano': 'contexto urbano/ciudad',
-                'rural': 'contexto rural/campo',
-                'institucional': 'contexto institucional (hospital, escuela, centro comunitario)'
-            }
-            context_parts.append(f"Contexto: {context_map.get(req.context, req.context)}")
+        # Mapeo de enfoque principal
+        focus_map = {
+            'derechos_humanos': 'derechos humanos',
+            'enfoque_genero': 'enfoque de género',
+            'determinantes_sociales': 'determinantes sociales',
+            'comunitario': 'comunitario',
+            'sistemico_familiar': 'sistémico familiar'
+        }
+        focus_str = focus_map.get(req.focus_area, req.focus_area) if req.focus_area else None
         
-        # Información geográfica de la Región de Aysén
-        region_info = (
-            "\n\nIMPORTANTE - Contexto Geográfico de la Región de Aysén:\n"
-            "El caso debe situarse en la Región de Aysén, Chile. Distribuye las ubicaciones considerando:\n"
-            "- Coyhaique (capital regional, ~60% población): Centro urbano principal, mayor acceso a servicios\n"
-            "- Puerto Aysén (~30% población): Puerto y centro industrial, conectado a Coyhaique\n"
-            "- Otras comunas (~10%): Chile Chico, Cochrane, Puerto Cisnes, Lago Verde, Río Ibáñez, "
-            "O'Higgins, Tortel, Guaitecas (zonas aisladas, rurales, menor acceso a servicios)\n"
-            "Usa estas localidades para dar realismo y variedad. Considera las características de cada zona:\n"
-            "- Acceso a servicios (hospitales, escuelas, centros comunitarios)\n"
-            "- Conectividad y distancias (algunas comunas muy aisladas)\n"
-            "- Actividades económicas (pesca, ganadería, turismo)\n"
-            "- Clima y geografía (inviernos duros, caminos cortados por nieve/lluvia)\n"
-        )
+        # Mapeo de competencia objetivo
+        competency_map = {
+            'diagnostico_social': 'diagnóstico social',
+            'diseño_intervencion': 'diseño de intervención',
+            'articulacion_redes': 'articulación de redes',
+            'entrevista_vinculacion': 'entrevista/vinculación',
+            'evaluacion': 'evaluación'
+        }
+        competency_str = competency_map.get(req.competency, req.competency) if req.competency else None
         
-        if req.focus_area:
-            focus_map = {
-                'diagnostico': 'enfocado en diagnóstico y evaluación inicial',
-                'intervencion': 'enfocado en diseño e implementación de intervenciones',
-                'evaluacion': 'enfocado en evaluación de resultados',
-                'completo': 'abarcando todo el proceso (diagnóstico, intervención y evaluación)'
-            }
-            context_parts.append(f"Énfasis: {focus_map.get(req.focus_area, req.focus_area)}")
+        # Mapeo de nivel de dificultad
+        difficulty_map = {
+            'basico': 'bajo',
+            'intermedio': 'medio',
+            'avanzado': 'alto'
+        }
+        difficulty_prompt = difficulty_map.get(difficulty, difficulty)
         
-        length_instruction = ""
-        if req.case_length:
-            length_map = {
-                'corto': 'Descripción breve en 2-3 párrafos (150-250 palabras)',
-                'medio': 'Descripción moderada en 3-4 párrafos (300-450 palabras)',
-                'extenso': 'Descripción detallada en 5-6 párrafos (600-800 palabras)'
-            }
-            length_instruction = f"\n{length_map.get(req.case_length, 'Descripción moderada en 3-4 párrafos')}"
-        else:
-            length_instruction = "\nDescripción moderada en 3-4 párrafos (300-450 palabras)"
+        # Construir instrucción para el prompt con los parámetros
+        prompt_input = f"Genera un caso con los siguientes parámetros:\n\n"
+        prompt_input += f"- eje: {theme}\n"
+        prompt_input += f"- nivel: {difficulty_prompt}\n"
         
-        prompt_input = (
-            f"Genera un caso clínico educativo para estudiantes de Trabajo Social.\n"
-            f"{'. '.join(context_parts)}.\n"
-            f"{region_info}\n"
-            "Entrega la respuesta estrictamente en JSON con las siguientes claves:\n"
-            "- 'case_id' (string corto único)\n"
-            "- 'title' (string, título descriptivo del caso)\n"
-            f"- 'description' (texto narrativo del caso dividido en párrafos CLARAMENTE SEPARADOS.{length_instruction}.\n"
-            "  IMPORTANTE: Cada párrafo debe estar separado por DOBLE salto de línea (\\n\\n).\n"
-            "  Estructura sugerida de párrafos:\n"
-            "  1. Presentación: datos demográficos, composición familiar\n"
-            "  2. Contexto: situación socioeconómica, vivienda, redes\n"
-            "  3. Problemática: descripción de la situación actual\n"
-            "  4. Factores: riesgos y protectores identificables\n"
-            "  5. (Opcional) Recursos e historia relevante adicional)\n"
-            "- 'learning_objectives' (array de 3-4 strings, objetivos de aprendizaje específicos)\n"
-            "- 'questions' (array de 3-4 objetos con este formato exacto):\n"
-            "  [\n"
-            "    {\n"
-            '      "question": "¿Pregunta sobre el caso?",\n'
-            '      "options": ["Opción A", "Opción B", "Opción C", "Opción D"],\n'
-            '      "correct_index": 0,  // índice de la respuesta correcta (0-3)\n'
-            '      "justification": "Explicación clara de por qué esta es correcta y las otras no"\n'
-            "    }\n"
-            "  ]\n"
-            "- 'suggested_interventions' (array de 4-5 strings, intervenciones específicas y aplicables)\n\n"
-            "CRÍTICO sobre el formato:\n"
-            "- DEBES usar \\n\\n (doble salto de línea) para separar cada párrafo en la descripción\n"
-            "- Cada párrafo debe tener entre 50-100 palabras\n"
-            "- NO escribas todo en un solo bloque de texto\n\n"
-            "IMPORTANTE sobre las preguntas:\n"
-            "- Cada pregunta evalúa: comprensión, análisis crítico o aplicación de teoría\n"
-            "- Opciones incorrectas deben ser plausibles pero claramente diferenciables\n"
-            "- Justificaciones deben explicar por qué la correcta es apropiada Y por qué las otras no\n\n"
-            "No incluyas texto adicional fuera del JSON."
-        )
+        if age_group_str:
+            prompt_input += f"- grupoEtario: {age_group_str}\n"
+        
+        if context_str:
+            prompt_input += f"- tipoTerritorio: {context_str}\n"
+        
+        if focus_str:
+            prompt_input += f"- enfoquePrincipal: {focus_str}\n"
+        
+        if competency_str:
+            prompt_input += f"- competenciaObjetivo: {competency_str}\n"
+        
+        # Extensión del caso
+        case_length = req.case_length or 'medio'
+        length_map = {
+            'corto': '4 párrafos',
+            'medio': '5 párrafos',
+            'extenso': '6 párrafos'
+        }
+        prompt_input += f"\nUsa {length_map.get(case_length, '5 párrafos')} para el relato.\n"
+        prompt_input += "\nResponde únicamente con el JSON especificado en tu configuración, sin texto adicional."
         
         api_start = time.time()
         try:
@@ -512,6 +495,106 @@ async def remove_case_from_collection_endpoint(collection_id: int, case_id: int)
         raise
     except Exception as e:
         logger.exception("Error removiendo caso de colección")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class SubmitAnswersRequest(BaseModel):
+    case_id: int
+    answers: list  # [{"question_index": 0, "selected_option": 1, "open_answer": "texto"}]
+    duration_seconds: Optional[int] = None
+
+
+@app.post("/api/auth/login")
+async def student_login(req: LoginRequest):
+    """Login para estudiantes."""
+    try:
+        student = _db.authenticate_student(DB_PATH, req.username, req.password)
+        if not student:
+            raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        return {"ok": True, "student": student, "token": f"student-{student['id']}"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error en login de estudiante")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/answers")
+async def submit_answers(req: SubmitAnswersRequest):
+    """Estudiante envía sus respuestas para un caso. Requiere autenticación."""
+    try:
+        student_id = 1  # TODO: extraer de token
+        session_id = _db.create_session(DB_PATH, student_id, req.case_id)
+        
+        case = _db.get_case(DB_PATH, req.case_id)
+        questions = case.get("payload", {}).get("questions", []) if case else []
+        
+        for ans in req.answers:
+            q_idx = ans.get("question_index")
+            selected = ans.get("selected_option")
+            open_ans = ans.get("open_answer")
+            
+            is_correct = None
+            if selected is not None and q_idx < len(questions):
+                q = questions[q_idx]
+                correct_idx = q.get("correct_index") or q.get("correctIndex")
+                if correct_idx is not None:
+                    is_correct = 1 if selected == correct_idx else 0
+            
+            _db.save_answer(DB_PATH, session_id, q_idx, selected, open_ans, is_correct)
+        
+        _db.submit_session(DB_PATH, session_id, req.duration_seconds)
+        
+        return {"ok": True, "session_id": session_id, "message": "Respuestas enviadas exitosamente"}
+    except Exception as e:
+        logger.exception("Error guardando respuestas")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/answers")
+async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, limit: int = 100):
+    """Obtiene respuestas (para docentes o estudiante propio)."""
+    try:
+        sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
+        for sess in sessions:
+            sess["answers"] = _db.get_session_answers(DB_PATH, sess["session_id"])
+        return {"ok": True, "sessions": sessions}
+    except Exception as e:
+        logger.exception("Error obteniendo respuestas")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/answers/{answer_id}/feedback")
+async def update_feedback(answer_id: int, feedback: str, score: Optional[float] = None):
+    """Docente agrega feedback y score a una respuesta."""
+    try:
+        updated = _db.update_answer_feedback(DB_PATH, answer_id, feedback, score)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Respuesta no encontrada")
+        return {"ok": True, "message": "Feedback actualizado"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error actualizando feedback")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/students")
+async def list_students():
+    """Lista estudiantes (para panel docente)."""
+    try:
+        students = _db.list_students(DB_PATH)
+        return {"ok": True, "students": students}
+    except Exception as e:
+        logger.exception("Error listando estudiantes")
         raise HTTPException(status_code=500, detail=str(e))
 
 

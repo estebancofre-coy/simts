@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import TeacherPanel from './TeacherPanel'
 import LoginModal from './LoginModal'
+import StudentLoginModal from './StudentLoginModal'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 // Componente para preguntas interactivas
-function QuestionsList({ questions }) {
+function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
   const [selectedAnswers, setSelectedAnswers] = useState({})
 
   const handleSelect = (questionIndex, optionIndex) => {
@@ -22,6 +23,7 @@ function QuestionsList({ questions }) {
         const selected = selectedAnswers[qIndex]
         const isAnswered = selected !== undefined
         const correctIndex = q.correct_index !== undefined ? q.correct_index : q.correctIndex
+        const isOpenEnded = !q.options || q.options.length === 0
 
         return (
           <div key={qIndex} style={{ 
@@ -35,58 +37,73 @@ function QuestionsList({ questions }) {
               {qIndex + 1}. {q.question || q.text}
             </div>
             
-            <div style={{ marginLeft: 12 }}>
-              {(q.options || []).map((opt, oIndex) => {
-                const isCorrect = oIndex === correctIndex
-                const isSelected = selected === oIndex
-                let bgColor = '#fff'
-                let borderColor = '#ccc'
-                let color = '#000'
-                
-                if (isAnswered) {
-                  if (isSelected) {
-                    if (isCorrect) {
-                      bgColor = '#d4edda'
-                      borderColor = '#28a745'
-                      color = '#155724'
-                    } else {
-                      bgColor = '#f8d7da'
-                      borderColor = '#dc3545'
-                      color = '#721c24'
+            {!isOpenEnded && (
+              <div style={{ marginLeft: 12 }}>
+                {(q.options || []).map((opt, oIndex) => {
+                  const isCorrect = oIndex === correctIndex
+                  const isSelected = selected === oIndex
+                  let bgColor = '#fff'
+                  let borderColor = '#ccc'
+                  let color = '#000'
+                  
+                  if (isAnswered) {
+                    if (isSelected) {
+                      if (isCorrect) {
+                        bgColor = '#d4edda'
+                        borderColor = '#28a745'
+                        color = '#155724'
+                      } else {
+                        bgColor = '#f8d7da'
+                        borderColor = '#dc3545'
+                        color = '#721c24'
+                      }
+                    } else if (isCorrect) {
+                      bgColor = '#d1ecf1'
+                      borderColor = '#17a2b8'
+                      color = '#0c5460'
                     }
-                  } else if (isCorrect) {
-                    bgColor = '#d1ecf1'
-                    borderColor = '#17a2b8'
-                    color = '#0c5460'
                   }
-                }
 
-                return (
-                  <div
-                    key={oIndex}
-                    onClick={() => !isAnswered && handleSelect(qIndex, oIndex)}
-                    style={{
-                      padding: '10px 14px',
-                      marginBottom: 8,
-                      border: `2px solid ${borderColor}`,
-                      borderRadius: 6,
-                      backgroundColor: bgColor,
-                      color: color,
-                      cursor: isAnswered ? 'default' : 'pointer',
-                      transition: 'all 0.2s',
-                      fontWeight: isCorrect && isAnswered ? 'bold' : 'normal'
-                    }}
-                  >
-                    <span style={{ marginRight: 8 }}>
-                      {String.fromCharCode(65 + oIndex)})
-                    </span>
-                    {opt}
-                    {isAnswered && isCorrect && ' ✓'}
-                    {isAnswered && isSelected && !isCorrect && ' ✗'}
-                  </div>
-                )
-              })}
-            </div>
+                  return (
+                    <div
+                      key={oIndex}
+                      onClick={() => !isAnswered && handleSelect(qIndex, oIndex)}
+                      style={{
+                        padding: '10px 14px',
+                        marginBottom: 8,
+                        border: `2px solid ${borderColor}`,
+                        borderRadius: 6,
+                        backgroundColor: bgColor,
+                        color: color,
+                        cursor: isAnswered ? 'default' : 'pointer',
+                        transition: 'all 0.2s',
+                        fontWeight: isCorrect && isAnswered ? 'bold' : 'normal'
+                      }}
+                    >
+                      <span style={{ marginRight: 8 }}>
+                        {String.fromCharCode(65 + oIndex)})
+                      </span>
+                      {opt}
+                      {isAnswered && isCorrect && ' ✓'}
+                      {isAnswered && isSelected && !isCorrect && ' ✗'}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {isOpenEnded && (
+              <div style={{ marginTop: 12 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>Respuesta del estudiante</label>
+                <textarea
+                  value={openAnswers?.[qIndex] || ''}
+                  onChange={(e) => onOpenAnswerChange?.(qIndex, e.target.value)}
+                  rows={4}
+                  placeholder="Escribe tu respuesta aquí..."
+                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', resize: 'vertical' }}
+                />
+              </div>
+            )}
 
             {isAnswered && (
               <div style={{ 
@@ -167,32 +184,43 @@ const THEMES = [
 ]
 
 const AGE_GROUPS = [
-  { value: '', label: 'Sin especificar' },
-  { value: 'niñez', label: 'Niñez (0-12 años)' },
+  { value: '', label: 'Sin especificar (IA decide)' },
+  { value: 'primera_infancia', label: 'Primera Infancia (0-5 años)' },
+  { value: 'niñez', label: 'Niñez (6-12 años)' },
   { value: 'adolescencia', label: 'Adolescencia (13-17 años)' },
-  { value: 'adulto', label: 'Adulto (18-64 años)' },
+  { value: 'adultez', label: 'Adultez (18-64 años)' },
   { value: 'adulto_mayor', label: 'Adulto Mayor (65+ años)' }
 ]
 
 const CONTEXTS = [
-  { value: '', label: 'Sin especificar' },
-  { value: 'urbano', label: 'Urbano' },
-  { value: 'rural', label: 'Rural' },
-  { value: 'institucional', label: 'Institucional' }
+  { value: '', label: 'Sin especificar (IA decide)' },
+  { value: 'urbano', label: 'Urbano (Coyhaique, Puerto Aysén)' },
+  { value: 'rural', label: 'Rural (comunas alejadas)' },
+  { value: 'rural_extremo', label: 'Rural Extremo (máximo aislamiento)' }
 ]
 
 const FOCUS_AREAS = [
-  { value: '', label: 'Sin especificar' },
-  { value: 'diagnostico', label: 'Diagnóstico' },
-  { value: 'intervencion', label: 'Intervención' },
-  { value: 'evaluacion', label: 'Evaluación' },
-  { value: 'completo', label: 'Proceso completo' }
+  { value: '', label: 'Sin especificar (IA decide)' },
+  { value: 'derechos_humanos', label: 'Derechos Humanos' },
+  { value: 'enfoque_genero', label: 'Enfoque de Género' },
+  { value: 'determinantes_sociales', label: 'Determinantes Sociales' },
+  { value: 'comunitario', label: 'Comunitario/Territorial' },
+  { value: 'sistemico_familiar', label: 'Sistémico Familiar' }
+]
+
+const COMPETENCIES = [
+  { value: '', label: 'Sin especificar (IA decide)' },
+  { value: 'diagnostico_social', label: 'Diagnóstico Social' },
+  { value: 'diseño_intervencion', label: 'Diseño de Intervención' },
+  { value: 'articulacion_redes', label: 'Articulación de Redes' },
+  { value: 'entrevista_vinculacion', label: 'Entrevista y Vinculación' },
+  { value: 'evaluacion', label: 'Evaluación de Resultados' }
 ]
 
 const CASE_LENGTHS = [
-  { value: 'corto', label: 'Corto (2-3 párrafos)' },
-  { value: 'medio', label: 'Medio (3-4 párrafos)' },
-  { value: 'extenso', label: 'Extenso (5-6 párrafos)' }
+  { value: 'corto', label: 'Corto (4 párrafos)' },
+  { value: 'medio', label: 'Medio (5 párrafos)' },
+  { value: 'extenso', label: 'Extenso (6 párrafos)' }
 ]
 
 export default function App() {
@@ -201,26 +229,49 @@ export default function App() {
   const [ageGroup, setAgeGroup] = useState('')
   const [context, setContext] = useState('')
   const [focusArea, setFocusArea] = useState('')
+  const [competency, setCompetency] = useState('')
   const [caseLength, setCaseLength] = useState('medio')
   const [caseObj, setCaseObj] = useState(null)
   const [responseText, setResponseText] = useState('')
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [openAnswers, setOpenAnswers] = useState({})
   const [showTeacherPanel, setShowTeacherPanel] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem('teacherAuth') === 'true'
   )
+  
+  // Student authentication state
+  const [showStudentLogin, setShowStudentLogin] = useState(false)
+  const [isStudentAuthenticated, setIsStudentAuthenticated] = useState(
+    localStorage.getItem('studentAuth') === 'true'
+  )
+  const [studentData, setStudentData] = useState(() => {
+    const saved = localStorage.getItem('studentData')
+    return saved ? JSON.parse(saved) : null
+  })
+  const [currentSessionId, setCurrentSessionId] = useState(null)
+  const [submittedAnswers, setSubmittedAnswers] = useState(false)
 
   async function generateCase() {
     setLoading(true)
     setCaseObj(null)
+    setOpenAnswers({})
     setResponseText('⏳ Generando caso... Esto puede tomar entre 30-60 segundos.')
     const startTime = Date.now()
     
     try {
-      console.log('🚀 Iniciando generación de caso:', { theme, difficulty })
+      console.log('🚀 Iniciando generación de caso:', { 
+        theme, 
+        difficulty, 
+        ageGroup, 
+        context, 
+        focusArea,
+        competency,
+        caseLength 
+      })
       console.log('📡 Endpoint:', `${API_BASE}/api/simulate`)
       
       const controller = new AbortController()
@@ -229,7 +280,16 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ generate: true, theme, difficulty }),
+        body: JSON.stringify({ 
+          generate: true, 
+          theme, 
+          difficulty,
+          age_group: ageGroup || undefined,
+          context: context || undefined,
+          focus_area: focusArea || undefined,
+          competency: competency || undefined,
+          case_length: caseLength
+        }),
         signal: controller.signal
       })
       
@@ -308,12 +368,106 @@ export default function App() {
     setShowTeacherPanel(false)
   }
 
+  function handleStudentLogin(student) {
+    setIsStudentAuthenticated(true)
+    setStudentData(student)
+    setShowStudentLogin(false)
+  }
+
+  function handleStudentLogout() {
+    setIsStudentAuthenticated(false)
+    setStudentData(null)
+    setCurrentSessionId(null)
+    setSubmittedAnswers(false)
+    localStorage.removeItem('studentAuth')
+    localStorage.removeItem('studentData')
+    localStorage.removeItem('studentToken')
+  }
+
+  async function submitAnswers() {
+    if (!isStudentAuthenticated || !caseObj) {
+      alert('Debes iniciar sesión y generar un caso antes de enviar respuestas')
+      return
+    }
+
+    // Recopilar respuestas del QuestionsList
+    const questionsElement = document.querySelector('[data-questions-list]')
+    if (!questionsElement) {
+      alert('No se encontraron preguntas para enviar')
+      return
+    }
+
+    // Obtener respuestas seleccionadas desde el componente QuestionsList
+    const selectedAnswers = {}
+    caseObj.questions.forEach((q, idx) => {
+      const checkedInput = document.querySelector(`input[name="q${idx}"]:checked`)
+      if (checkedInput) {
+        selectedAnswers[idx] = parseInt(checkedInput.value)
+      }
+    })
+
+    // Preparar array de respuestas para el backend
+    const answers = caseObj.questions.map((q, idx) => {
+      const isOpenEnded = !q.options || q.options.length === 0
+      
+      if (isOpenEnded) {
+        return {
+          question_text: q.question,
+          answer_type: 'open',
+          student_answer: openAnswers[idx] || '',
+          is_correct: null
+        }
+      } else {
+        const selectedIndex = selectedAnswers[idx]
+        return {
+          question_text: q.question,
+          answer_type: 'multiple_choice',
+          student_answer: selectedIndex !== undefined ? q.options[selectedIndex] : null,
+          correct_answer: q.correctAnswer,
+          is_correct: selectedIndex === q.correctAnswer
+        }
+      }
+    })
+
+    try {
+      const token = localStorage.getItem('studentToken')
+      const response = await fetch(`${API_BASE}/api/answers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          case_id: caseObj.id,
+          answers: answers
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || 'Error al enviar respuestas')
+      }
+
+      setCurrentSessionId(data.session_id)
+      setSubmittedAnswers(true)
+      alert(`✅ Respuestas enviadas correctamente!\n\nPuntaje: ${data.score}/${data.total}\nSesión ID: ${data.session_id}`)
+    } catch (err) {
+      console.error('Error enviando respuestas:', err)
+      alert('Error al enviar respuestas: ' + err.message)
+    }
+  }
+
   function attemptOpenPanel() {
     if (isAuthenticated) {
       setShowTeacherPanel(true)
     } else {
       setShowLogin(true)
     }
+  }
+
+  function handleOpenAnswerChange(index, text) {
+    setOpenAnswers(prev => ({ ...prev, [index]: text }))
   }
 
   return (
@@ -325,10 +479,18 @@ export default function App() {
           onCancel={() => setShowLogin(false)}
         />
       )}
+      {showStudentLogin && (
+        <StudentLoginModal
+          onLogin={handleStudentLogin}
+          onCancel={() => setShowStudentLogin(false)}
+        />
+      )}
       {showTeacherPanel && isAuthenticated && (
         <TeacherPanel 
           onClose={() => setShowTeacherPanel(false)}
           onLogout={handleLogout}
+          openAnswers={openAnswers}
+          activeCase={caseObj}
         />
       )}
       <header className="app-header">
@@ -341,6 +503,44 @@ export default function App() {
           <div className="header-text">
             <h1>Simulador de Casos </h1>
             <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysén</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {isStudentAuthenticated ? (
+              <>
+                <span style={{ fontSize: '0.9rem', color: '#666' }}>
+                  👤 {studentData?.name || studentData?.username}
+                </span>
+                <button 
+                  onClick={handleStudentLogout}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    border: 'none',
+                    borderRadius: '4px',
+                    backgroundColor: '#f44336',
+                    color: 'white',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  Cerrar Sesión
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={() => setShowStudentLogin(true)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem'
+                }}
+              >
+                Iniciar Sesión Estudiante
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -377,6 +577,64 @@ export default function App() {
           </div>
         </div>
 
+        {/* NUEVOS SELECTORES AGREGADOS */}
+        <div className="form-group">
+          <label className="form-label">
+            Grupo Etario
+            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
+          </label>
+          <select className="form-select" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+            {AGE_GROUPS.map((g) => (
+              <option value={g.value} key={g.value}>{g.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            Contexto Territorial
+            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
+          </label>
+          <select className="form-select" value={context} onChange={(e) => setContext(e.target.value)}>
+            {CONTEXTS.map((c) => (
+              <option value={c.value} key={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            Enfoque Principal
+            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
+          </label>
+          <select className="form-select" value={focusArea} onChange={(e) => setFocusArea(e.target.value)}>
+            {FOCUS_AREAS.map((f) => (
+              <option value={f.value} key={f.value}>{f.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">
+            Competencia Objetivo
+            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
+          </label>
+          <select className="form-select" value={competency} onChange={(e) => setCompetency(e.target.value)}>
+            {COMPETENCIES.map((comp) => (
+              <option value={comp.value} key={comp.value}>{comp.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Extensión del Caso</label>
+          <select className="form-select" value={caseLength} onChange={(e) => setCaseLength(e.target.value)}>
+            {CASE_LENGTHS.map((l) => (
+              <option value={l.value} key={l.value}>{l.label}</option>
+            ))}
+          </select>
+        </div>
+
         <button className="btn-primary" onClick={generateCase} disabled={loading}>
           {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
         </button>
@@ -391,6 +649,8 @@ export default function App() {
               <div className="case-meta">
                 {caseObj.eje && <span className="badge badge-theme">{caseObj.eje}</span>}
                 {caseObj.nivel && <span className="badge badge-level">{caseObj.nivel}</span>}
+                {caseObj.grupoEtario && <span className="badge badge-info">{caseObj.grupoEtario}</span>}
+                {caseObj.tipoTerritorio && <span className="badge badge-info">{caseObj.tipoTerritorio}</span>}
               </div>
             </div>
             
@@ -417,7 +677,62 @@ export default function App() {
           )}
 
           {/* Preguntas interactivas */}
-          {caseObj.questions && <QuestionsList questions={caseObj.questions} />}
+          {caseObj.questions && (
+            <>
+              <div data-questions-list>
+                <QuestionsList 
+                  questions={caseObj.questions}
+                  openAnswers={openAnswers}
+                  onOpenAnswerChange={handleOpenAnswerChange}
+                />
+              </div>
+              
+              {isStudentAuthenticated && !submittedAnswers && (
+                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+                  <button
+                    onClick={submitAnswers}
+                    style={{
+                      padding: '1rem 2rem',
+                      fontSize: '1.1rem',
+                      backgroundColor: '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                    }}
+                  >
+                    📤 Enviar Respuestas
+                  </button>
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                    Asegúrate de responder todas las preguntas antes de enviar
+                  </p>
+                </div>
+              )}
+
+              {submittedAnswers && currentSessionId && (
+                <div style={{
+                  marginTop: '2rem',
+                  padding: '1.5rem',
+                  backgroundColor: '#e8f5e9',
+                  border: '2px solid #4CAF50',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#2e7d32' }}>
+                    ✅ Respuestas enviadas correctamente
+                  </h3>
+                  <p style={{ margin: 0, color: '#666' }}>
+                    Sesión ID: {currentSessionId}
+                  </p>
+                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                    Tu docente podrá revisar y calificar tus respuestas
+                  </p>
+                </div>
+              )}
+            </>
+          )}
           
           {/* Fallback para formato antiguo */}
           {caseObj.suggested_questions && !caseObj.questions && (

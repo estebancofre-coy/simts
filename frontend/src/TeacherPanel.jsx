@@ -4,7 +4,7 @@ import 'jspdf-autotable'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
-export default function TeacherPanel({ onClose, onLogout }) {
+export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, activeCase = null }) {
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState(null)
@@ -12,17 +12,25 @@ export default function TeacherPanel({ onClose, onLogout }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState(null)
   const [filter, setFilter] = useState({ theme: '', difficulty: '', search: '' })
-  const [view, setView] = useState('list') // 'list' | 'edit' | 'stats' | 'collections'
+  const [view, setView] = useState('list') // 'list' | 'edit' | 'stats' | 'collections' | 'answers'
   const [collections, setCollections] = useState([])
   const [selectedCollection, setSelectedCollection] = useState(null)
   const [showNewCollectionForm, setShowNewCollectionForm] = useState(false)
   const [newCollectionName, setNewCollectionName] = useState('')
   const [newCollectionDesc, setNewCollectionDesc] = useState('')
+  
+  // Student answers state
+  const [students, setStudents] = useState([])
+  const [sessions, setSessions] = useState([])
+  const [selectedSession, setSelectedSession] = useState(null)
+  const [sessionAnswers, setSessionAnswers] = useState([])
+  const [answerFilters, setAnswerFilters] = useState({ student_id: '', case_id: '' })
 
   useEffect(() => {
     loadCases()
     loadStatistics()
     loadCollections()
+    loadStudents()
   }, [])
 
   async function loadCases() {
@@ -62,6 +70,191 @@ export default function TeacherPanel({ onClose, onLogout }) {
     } catch (e) {
       console.error('Error cargando colecciones:', e)
     }
+  }
+
+  async function loadStudents() {
+    try {
+      const res = await fetch(`${API_BASE}/api/students`)
+      const data = await res.json()
+      if (data.ok) {
+        setStudents(data.students || [])
+      }
+    } catch (e) {
+      console.error('Error cargando estudiantes:', e)
+    }
+  }
+
+  async function loadSessions() {
+    try {
+      const params = new URLSearchParams()
+      if (answerFilters.student_id) params.append('student_id', answerFilters.student_id)
+      if (answerFilters.case_id) params.append('case_id', answerFilters.case_id)
+      
+      const res = await fetch(`${API_BASE}/api/answers?${params}`)
+      const data = await res.json()
+      if (data.ok) {
+        setSessions(data.sessions || [])
+      }
+    } catch (e) {
+      console.error('Error cargando sesiones:', e)
+    }
+  }
+
+  async function loadSessionAnswers(sessionId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/answers?session_id=${sessionId}`)
+      const data = await res.json()
+      if (data.ok && data.sessions.length > 0) {
+        setSessionAnswers(data.sessions[0].answers || [])
+        setSelectedSession(data.sessions[0])
+      }
+    } catch (e) {
+      console.error('Error cargando respuestas:', e)
+    }
+  }
+
+  async function updateAnswerFeedback(answerId, feedback, score) {
+    try {
+      const res = await fetch(`${API_BASE}/api/answers/${answerId}/feedback`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback, score })
+      })
+      
+      const data = await res.json()
+      if (data.ok) {
+        // Reload current session
+        if (selectedSession) {
+          loadSessionAnswers(selectedSession.id)
+        }
+        alert('✅ Feedback guardado')
+      }
+    } catch (e) {
+      console.error('Error guardando feedback:', e)
+      alert('Error guardando feedback')
+    }
+  }
+
+  function exportSessionsCSV() {
+    if (sessions.length === 0) {
+      alert('No hay datos para exportar')
+      return
+    }
+
+    const headers = ['Estudiante', 'Caso', 'Fecha', 'Puntaje', 'Total', 'Porcentaje']
+    const rows = sessions.map(s => [
+      s.student_name || `Estudiante ${s.student_id}`,
+      (s.case_title || `Caso ${s.case_id}`).replace(/,/g, ';'),
+      new Date(s.submitted_at).toLocaleString('es-CL'),
+      s.score,
+      s.total,
+      `${Math.round((s.score / s.total) * 100)}%`
+    ])
+
+    const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `respuestas_estudiantes_${new Date().toISOString().split('T')[0]}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function exportSessionsPDF() {
+    if (sessions.length === 0) {
+      alert('No hay datos para exportar')
+      return
+    }
+
+    const doc = new jsPDF()
+    
+    // Título
+    doc.setFontSize(18)
+    doc.text('Reporte de Respuestas de Estudiantes', 14, 20)
+    doc.setFontSize(11)
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 14, 28)
+    
+    // Tabla de sesiones
+    const tableData = sessions.map(s => [
+      s.student_name || `Est. ${s.student_id}`,
+      (s.case_title || `Caso ${s.case_id}`).substring(0, 40),
+      new Date(s.submitted_at).toLocaleDateString('es-CL'),
+      `${s.score}/${s.total}`,
+      `${Math.round((s.score / s.total) * 100)}%`
+    ])
+
+    doc.autoTable({
+      head: [['Estudiante', 'Caso', 'Fecha', 'Puntaje', '%']],
+      body: tableData,
+      startY: 35,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [76, 175, 80] }
+    })
+
+    doc.save(`respuestas_estudiantes_${new Date().toISOString().split('T')[0]}.pdf`)
+  }
+
+  function exportSessionDetailPDF(session, answers) {
+    const doc = new jsPDF()
+    
+    doc.setFontSize(16)
+    doc.text('Detalle de Respuestas', 14, 20)
+    
+    doc.setFontSize(11)
+    doc.text(`Estudiante: ${session.student_name || `Estudiante ${session.student_id}`}`, 14, 30)
+    doc.text(`Caso: ${session.case_title || `Caso ${session.case_id}`}`, 14, 37)
+    doc.text(`Fecha: ${new Date(session.submitted_at).toLocaleString('es-CL')}`, 14, 44)
+    doc.text(`Puntaje: ${session.score}/${session.total} (${Math.round((session.score / session.total) * 100)}%)`, 14, 51)
+    
+    let yPos = 60
+    
+    answers.forEach((answer, idx) => {
+      if (yPos > 260) {
+        doc.addPage()
+        yPos = 20
+      }
+      
+      doc.setFontSize(10)
+      doc.setFont(undefined, 'bold')
+      doc.text(`Pregunta ${idx + 1}:`, 14, yPos)
+      yPos += 5
+      
+      doc.setFont(undefined, 'normal')
+      const questionLines = doc.splitTextToSize(answer.question_text, 180)
+      doc.text(questionLines, 14, yPos)
+      yPos += questionLines.length * 5 + 3
+      
+      if (answer.answer_type === 'multiple_choice') {
+        doc.text(`Respuesta: ${answer.student_answer || 'Sin responder'}`, 14, yPos)
+        yPos += 5
+        doc.text(`${answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}`, 14, yPos)
+        yPos += 5
+      } else {
+        doc.text('Respuesta abierta:', 14, yPos)
+        yPos += 5
+        const answerLines = doc.splitTextToSize(answer.student_answer || 'Sin responder', 180)
+        doc.text(answerLines, 14, yPos)
+        yPos += answerLines.length * 5
+      }
+      
+      if (answer.feedback) {
+        yPos += 3
+        doc.setFont(undefined, 'italic')
+        doc.text('Feedback: ' + answer.feedback, 14, yPos)
+        doc.setFont(undefined, 'normal')
+        yPos += 5
+      }
+      
+      if (answer.score !== null) {
+        doc.text(`Puntaje: ${answer.score}/100`, 14, yPos)
+        yPos += 5
+      }
+      
+      yPos += 8
+    })
+    
+    doc.save(`respuestas_${session.student_name || session.student_id}_${session.id}.pdf`)
   }
 
   async function createCollection() {
@@ -429,6 +622,29 @@ export default function TeacherPanel({ onClose, onLogout }) {
           </div>
         </div>
 
+          {activeCase && Object.keys(openAnswers || {}).length > 0 && (
+            <div className="panel-card" style={{ marginBottom: 16 }}>
+              <h4 style={{ marginBottom: 8 }}>📝 Respuestas abiertas (sesión actual)</h4>
+              <div style={{ fontSize: 14, marginBottom: 8 }}>
+                Caso activo: <strong>{activeCase.title || activeCase.case_id || 'Sin título'}</strong>
+              </div>
+              <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
+                {Object.entries(openAnswers).map(([idx, text]) => {
+                  const qIndex = Number(idx)
+                  const q = (activeCase.questions || [])[qIndex]
+                  return (
+                    <li key={idx} style={{ marginBottom: 10, padding: 10, background: '#f7f7f7', borderRadius: 6 }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: 6 }}>
+                        Pregunta {qIndex + 1}: {q?.question || q?.text || 'Pregunta abierta'}
+                      </div>
+                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{text || 'Sin respuesta'}</div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
         <div className="panel-nav">
           <button 
             className={view === 'list' ? 'nav-btn active' : 'nav-btn'}
@@ -441,6 +657,12 @@ export default function TeacherPanel({ onClose, onLogout }) {
             onClick={() => { setView('collections'); setSelectedCollection(null) }}
           >
             📚 Colecciones
+          </button>
+          <button 
+            className={view === 'answers' ? 'nav-btn active' : 'nav-btn'}
+            onClick={() => { setView('answers'); loadSessions() }}
+          >
+            ✍️ Respuestas Estudiantes
           </button>
           <button 
             className={view === 'stats' ? 'nav-btn active' : 'nav-btn'}
@@ -677,6 +899,249 @@ export default function TeacherPanel({ onClose, onLogout }) {
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {view === 'answers' && (
+            <div className="answers-view">
+              <h3>✍️ Respuestas de Estudiantes</h3>
+              
+              <div className="filters" style={{ marginBottom: '1.5rem' }}>
+                <select
+                  value={answerFilters.student_id}
+                  onChange={(e) => setAnswerFilters(prev => ({ ...prev, student_id: e.target.value }))}
+                  style={{ padding: '0.5rem', marginRight: '0.5rem' }}
+                >
+                  <option value="">Todos los estudiantes</option>
+                  {students.map(s => (
+                    <option key={s.id} value={s.id}>{s.name || s.username}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={answerFilters.case_id}
+                  onChange={(e) => setAnswerFilters(prev => ({ ...prev, case_id: e.target.value }))}
+                  style={{ padding: '0.5rem', marginRight: '0.5rem' }}
+                >
+                  <option value="">Todos los casos</option>
+                  {cases.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
+                    </option>
+                  ))}
+                </select>
+
+                <button 
+                  onClick={loadSessions}
+                  className="btn-primary"
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  🔍 Buscar
+                </button>
+              </div>
+
+              {selectedSession ? (
+                <div className="session-details">
+                  <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4>
+                      Sesión de {selectedSession.student_name} - {selectedSession.case_title}
+                    </h4>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => exportSessionDetailPDF(selectedSession, sessionAnswers)}
+                        className="btn-primary"
+                        style={{ padding: '0.5rem 1rem' }}
+                      >
+                        📄 Exportar PDF
+                      </button>
+                      <button 
+                        onClick={() => { setSelectedSession(null); setSessionAnswers([]) }}
+                        className="btn-secondary"
+                      >
+                        ← Volver a lista
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ 
+                    padding: '1rem', 
+                    backgroundColor: '#f5f5f5', 
+                    borderRadius: '4px',
+                    marginBottom: '1rem'
+                  }}>
+                    <p><strong>Fecha:</strong> {new Date(selectedSession.submitted_at).toLocaleString('es-CL')}</p>
+                    <p><strong>Tiempo:</strong> {selectedSession.time_spent ? `${selectedSession.time_spent} segundos` : 'N/A'}</p>
+                    <p><strong>Puntaje:</strong> {selectedSession.score}/{selectedSession.total}</p>
+                  </div>
+
+                  {sessionAnswers.map((answer, idx) => (
+                    <div key={answer.id} style={{
+                      border: '1px solid #ddd',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      marginBottom: '1rem',
+                      backgroundColor: 'white'
+                    }}>
+                      <h5>Pregunta {idx + 1}</h5>
+                      <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                        {answer.question_text}
+                      </p>
+
+                      {answer.answer_type === 'multiple_choice' ? (
+                        <>
+                          <p>
+                            <strong>Respuesta:</strong> {answer.student_answer || 'Sin responder'}
+                            {answer.is_correct !== null && (
+                              <span style={{ 
+                                marginLeft: '0.5rem',
+                                color: answer.is_correct ? 'green' : 'red',
+                                fontWeight: 'bold'
+                              }}>
+                                {answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}
+                              </span>
+                            )}
+                          </p>
+                          {!answer.is_correct && answer.correct_answer && (
+                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                              <strong>Respuesta correcta:</strong> {answer.correct_answer}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <div style={{ 
+                          padding: '0.75rem',
+                          backgroundColor: '#f9f9f9',
+                          borderRadius: '4px',
+                          marginTop: '0.5rem'
+                        }}>
+                          <strong>Respuesta abierta:</strong>
+                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>
+                            {answer.student_answer || 'Sin responder'}
+                          </p>
+                        </div>
+                      )}
+
+                      <div style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
+                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+                          Feedback del docente:
+                        </label>
+                        <textarea
+                          defaultValue={answer.feedback || ''}
+                          placeholder="Escribe retroalimentación aquí..."
+                          rows={3}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            borderRadius: '4px',
+                            border: '1px solid #ddd',
+                            marginBottom: '0.5rem'
+                          }}
+                          id={`feedback-${answer.id}`}
+                        />
+
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <label>Puntaje:</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            defaultValue={answer.score || ''}
+                            placeholder="0-100"
+                            style={{
+                              width: '80px',
+                              padding: '0.5rem',
+                              borderRadius: '4px',
+                              border: '1px solid #ddd'
+                            }}
+                            id={`score-${answer.id}`}
+                          />
+                          <button
+                            onClick={() => {
+                              const feedback = document.getElementById(`feedback-${answer.id}`).value
+                              const score = parseFloat(document.getElementById(`score-${answer.id}`).value)
+                              updateAnswerFeedback(answer.id, feedback, score || null)
+                            }}
+                            className="btn-primary"
+                            style={{ padding: '0.5rem 1rem' }}
+                          >
+                            💾 Guardar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  {sessions.length > 0 && (
+                    <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                      <button 
+                        onClick={exportSessionsCSV}
+                        className="btn-primary"
+                        style={{ padding: '0.5rem 1rem' }}
+                      >
+                        📊 Exportar CSV
+                      </button>
+                      <button 
+                        onClick={exportSessionsPDF}
+                        className="btn-primary"
+                        style={{ padding: '0.5rem 1rem' }}
+                      >
+                        📄 Exportar PDF
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div className="cases-table-container">
+                    <table className="cases-table">
+                      <thead>
+                        <tr>
+                          <th>Estudiante</th>
+                          <th>Caso</th>
+                        <th>Fecha</th>
+                        <th>Puntaje</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessions.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                            No se encontraron sesiones. Usa los filtros y presiona Buscar.
+                          </td>
+                        </tr>
+                      ) : (
+                        sessions.map(session => (
+                          <tr key={session.id}>
+                            <td>{session.student_name || `Estudiante ${session.student_id}`}</td>
+                            <td>{session.case_title?.substring(0, 60) || `Caso ${session.case_id}`}</td>
+                            <td>{new Date(session.submitted_at).toLocaleDateString('es-CL')}</td>
+                            <td>
+                              <strong>{session.score}/{session.total}</strong>
+                              <span style={{ 
+                                marginLeft: '0.5rem',
+                                fontSize: '0.9rem',
+                                color: '#666'
+                              }}>
+                                ({Math.round((session.score / session.total) * 100)}%)
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => loadSessionAnswers(session.id)}
+                                className="btn-view"
+                              >
+                                👁️ Ver Respuestas
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                </>
+              )}
             </div>
           )}
 
