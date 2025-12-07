@@ -226,6 +226,15 @@ const CASE_LENGTHS = [
 
 export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAuthenticated, isStudentAuthenticated: propIsStudentAuthenticated, studentData: propStudentData }) {
   const navigate = useNavigate()
+  
+  // Determinar el tipo de usuario actual
+  const isTeacher = propIsTeacherAuthenticated || localStorage.getItem('teacherAuth') === 'true'
+  const isStudent = propIsStudentAuthenticated || localStorage.getItem('studentAuth') === 'true'
+  
+  // Debug
+  console.log('App render - isTeacher:', isTeacher, 'isStudent:', isStudent)
+  console.log('Props:', { propIsTeacherAuthenticated, propIsStudentAuthenticated })
+  
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
   const [ageGroup, setAgeGroup] = useState('')
@@ -242,15 +251,11 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   const [openAnswers, setOpenAnswers] = useState({})
   const [showTeacherPanel, setShowTeacherPanel] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    propIsTeacherAuthenticated || localStorage.getItem('teacherAuth') === 'true'
-  )
+  const [isAuthenticated, setIsAuthenticated] = useState(isTeacher)
   
   // Student authentication state
   const [showStudentLogin, setShowStudentLogin] = useState(false)
-  const [isStudentAuthenticated, setIsStudentAuthenticated] = useState(
-    propIsStudentAuthenticated || localStorage.getItem('studentAuth') === 'true'
-  )
+  const [isStudentAuthenticated, setIsStudentAuthenticated] = useState(isStudent)
   const [studentData, setStudentData] = useState(
     propStudentData || (() => {
       const saved = localStorage.getItem('studentData')
@@ -395,10 +400,10 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
 
   // Auto-abrir panel de docentes si ya está autenticado
   useEffect(() => {
-    if (isAuthenticated && !isStudentAuthenticated) {
+    if (isTeacher && !isStudent) {
       setShowTeacherPanel(true)
     }
-  }, [isAuthenticated, isStudentAuthenticated])
+  }, [isTeacher, isStudent])
 
   // Sincronizar con props de ProtectedApp
   useEffect(() => {
@@ -539,7 +544,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
       )}
       
       {/* Si es docente autenticado, mostrar solo el panel docente */}
-      {isAuthenticated && !isStudentAuthenticated ? (
+      {isTeacher && !isStudent ? (
         <TeacherPanel 
           onClose={() => {}}
           onLogout={handleLogout}
