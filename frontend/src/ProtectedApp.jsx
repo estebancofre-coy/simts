@@ -218,5 +218,12 @@ export default function ProtectedApp() {
   }
 
   // If authenticated, show the main app
-  return <App onLogout={handleLogout} />
+  return (
+    <App 
+      onLogout={handleLogout} 
+      isTeacherAuthenticated={isTeacherAuthenticated}
+      isStudentAuthenticated={isStudentAuthenticated}
+      studentData={studentData}
+    />
+  )
 }

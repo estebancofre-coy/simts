@@ -224,7 +224,7 @@ const CASE_LENGTHS = [
   { value: 'extenso', label: 'Extenso (6 párrafos)' }
 ]
 
-export default function App({ onLogout }) {
+export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAuthenticated, isStudentAuthenticated: propIsStudentAuthenticated, studentData: propStudentData }) {
   const navigate = useNavigate()
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
@@ -243,18 +243,20 @@ export default function App({ onLogout }) {
   const [showTeacherPanel, setShowTeacherPanel] = useState(false)
   const [showLogin, setShowLogin] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(
-    localStorage.getItem('teacherAuth') === 'true'
+    propIsTeacherAuthenticated || localStorage.getItem('teacherAuth') === 'true'
   )
   
   // Student authentication state
   const [showStudentLogin, setShowStudentLogin] = useState(false)
   const [isStudentAuthenticated, setIsStudentAuthenticated] = useState(
-    localStorage.getItem('studentAuth') === 'true'
+    propIsStudentAuthenticated || localStorage.getItem('studentAuth') === 'true'
   )
-  const [studentData, setStudentData] = useState(() => {
-    const saved = localStorage.getItem('studentData')
-    return saved ? JSON.parse(saved) : null
-  })
+  const [studentData, setStudentData] = useState(
+    propStudentData || (() => {
+      const saved = localStorage.getItem('studentData')
+      return saved ? JSON.parse(saved) : null
+    })()
+  )
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [submittedAnswers, setSubmittedAnswers] = useState(false)
   const [activeTab, setActiveTab] = useState('generate') // 'generate' or 'feedback'
@@ -397,6 +399,18 @@ export default function App({ onLogout }) {
       setShowTeacherPanel(true)
     }
   }, [isAuthenticated, isStudentAuthenticated])
+
+  // Sincronizar con props de ProtectedApp
+  useEffect(() => {
+    if (propIsTeacherAuthenticated) {
+      setIsAuthenticated(true)
+      setShowTeacherPanel(true)
+    }
+    if (propIsStudentAuthenticated && propStudentData) {
+      setIsStudentAuthenticated(true)
+      setStudentData(propStudentData)
+    }
+  }, [propIsTeacherAuthenticated, propIsStudentAuthenticated, propStudentData])
 
   function handleLoginSuccess() {
     setIsAuthenticated(true)
