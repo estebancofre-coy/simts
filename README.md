@@ -96,3 +96,95 @@ cat DEPLOY-VERCEL.md
 4. Configura variables de entorno (OPENAI_API_KEY, VITE_API_URL)
 
 Ver [DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md) para instrucciones paso a paso.
+
+## 👥 Gestión de Estudiantes
+
+### Agregar Estudiantes Manualmente
+
+Los estudiantes se almacenan en la base de datos SQLite (`backend/simts.db`). Para agregar nuevos estudiantes:
+
+**Opción 1: Usando SQLite directamente**
+
+```bash
+# Acceder a la base de datos
+cd backend
+sqlite3 simts.db
+
+# Insertar un nuevo estudiante
+INSERT INTO students (username, name, email, password, created_at)
+VALUES ('juan.perez', 'Juan Pérez', 'juan.perez@universidad.cl', 'password123', datetime('now'));
+
+# Verificar
+SELECT id, username, name, email FROM students;
+
+# Salir
+.quit
+```
+
+**Opción 2: Usando Python**
+
+```python
+import sqlite3
+from datetime import datetime
+
+conn = sqlite3.connect('backend/simts.db')
+cursor = conn.cursor()
+
+# Insertar estudiante
+cursor.execute('''
+    INSERT INTO students (username, name, email, password, created_at)
+    VALUES (?, ?, ?, ?, ?)
+''', ('maria.lopez', 'María López', 'maria.lopez@universidad.cl', 'password123', datetime.now().isoformat()))
+
+conn.commit()
+print(f"Estudiante agregado con ID: {cursor.lastrowid}")
+conn.close()
+```
+
+**Opción 3: Script de importación masiva**
+
+```bash
+# Crear archivo CSV con estudiantes
+cat > estudiantes.csv << EOF
+username,name,email,password
+carlos.rodriguez,Carlos Rodríguez,carlos.rodriguez@universidad.cl,pass123
+ana.martinez,Ana Martínez,ana.martinez@universidad.cl,pass123
+EOF
+
+# Importar con script Python
+python3 backend/scripts/import_students.py estudiantes.csv
+```
+
+### Estructura de la Tabla Students
+
+```sql
+CREATE TABLE students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    name TEXT,
+    email TEXT,
+    password TEXT,
+    created_at TEXT,
+    metadata TEXT  -- JSON con información adicional
+);
+```
+
+### Consideraciones de Seguridad
+
+**⚠️ IMPORTANTE:** En producción, las contraseñas deben estar hasheadas. Actualmente el sistema usa contraseñas en texto plano para desarrollo.
+
+**Para producción, implementar:**
+1. Hash de contraseñas con bcrypt o similar
+2. Sistema de registro con validación de email
+3. Recuperación de contraseñas
+4. Panel administrativo para gestión de usuarios
+
+### Próximas Mejoras
+
+Se planea implementar:
+- Panel de administración en la interfaz web
+- Registro de estudiantes con auto-aprobación o moderación
+- Importación masiva desde CSV/Excel
+- Integración con sistemas institucionales (LDAP, OAuth)
+- Gestión de roles y permisos
+

@@ -326,9 +326,9 @@ async def save_case_endpoint(case: dict):
 
 
 @app.get("/api/cases")
-async def list_cases_endpoint(theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50, status: Optional[str] = None):
+async def list_cases_endpoint(theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50, status: Optional[str] = None, created_by: Optional[int] = None):
     try:
-        items = _db.list_cases(DB_PATH, theme=theme, difficulty=difficulty, limit=limit, status=status)
+        items = _db.list_cases(DB_PATH, theme=theme, difficulty=difficulty, limit=limit, status=status, created_by=created_by)
     except Exception as e:
         logger.exception("Error leyendo casos de DB")
         raise HTTPException(status_code=500, detail=str(e))

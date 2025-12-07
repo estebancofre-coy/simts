@@ -895,53 +895,126 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
 
           {view === 'answers' && (
             <div className="answers-view">
-              <h3>✍️ Respuestas de Estudiantes</h3>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '1.5rem',
+                paddingBottom: '1rem',
+                borderBottom: '2px solid #e0e0e0'
+              }}>
+                <h3 style={{ margin: 0, color: '#003d6b', fontSize: '1.5rem' }}>✍️ Respuestas de Estudiantes</h3>
+                {sessions.length > 0 && !selectedSession && (
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                      onClick={exportSessionsCSV}
+                      className="btn-export"
+                    >
+                      📊 CSV
+                    </button>
+                    <button 
+                      onClick={exportSessionsPDF}
+                      className="btn-export"
+                    >
+                      📄 PDF
+                    </button>
+                  </div>
+                )}
+              </div>
               
-              <div className="filters" style={{ marginBottom: '1.5rem' }}>
-                <select
-                  value={answerFilters.student_id}
-                  onChange={(e) => setAnswerFilters(prev => ({ ...prev, student_id: e.target.value }))}
-                  style={{ padding: '0.5rem', marginRight: '0.5rem' }}
-                >
-                  <option value="">Todos los estudiantes</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>{s.name || s.username}</option>
-                  ))}
-                </select>
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+                padding: '1rem',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '8px'
+              }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                    👨‍🎓 Estudiante
+                  </label>
+                  <select
+                    value={answerFilters.student_id}
+                    onChange={(e) => setAnswerFilters(prev => ({ ...prev, student_id: e.target.value }))}
+                    style={{ 
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd',
+                      fontSize: '0.95rem'
+                    }}
+                  >
+                    <option value="">Todos los estudiantes</option>
+                    {students.map(s => (
+                      <option key={s.id} value={s.id}>{s.name || s.username}</option>
+                    ))}
+                  </select>
+                </div>
 
-                <select
-                  value={answerFilters.case_id}
-                  onChange={(e) => setAnswerFilters(prev => ({ ...prev, case_id: e.target.value }))}
-                  style={{ padding: '0.5rem', marginRight: '0.5rem' }}
-                >
-                  <option value="">Todos los casos</option>
-                  {cases.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
-                    </option>
-                  ))}
-                </select>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                    📋 Caso
+                  </label>
+                  <select
+                    value={answerFilters.case_id}
+                    onChange={(e) => setAnswerFilters(prev => ({ ...prev, case_id: e.target.value }))}
+                    style={{ 
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: '6px',
+                      border: '1px solid #ddd',
+                      fontSize: '0.95rem'
+                    }}
+                  >
+                    <option value="">Todos los casos</option>
+                    {cases.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.title?.substring(0, 50) || `Caso ${c.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                <button 
-                  onClick={loadSessions}
-                  className="btn-primary"
-                  style={{ padding: '0.5rem 1rem' }}
-                >
-                  🔍 Buscar
-                </button>
+                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                  <button 
+                    onClick={loadSessions}
+                    className="btn-primary"
+                    style={{ 
+                      width: '100%',
+                      padding: '0.75rem 1.5rem',
+                      fontSize: '1rem',
+                      fontWeight: '600'
+                    }}
+                  >
+                    🔍 Buscar Sesiones
+                  </button>
+                </div>
               </div>
 
               {selectedSession ? (
                 <div className="session-details">
-                  <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4>
-                      Sesión de {selectedSession.student_name} - {selectedSession.case_title}
-                    </h4>
+                  <div style={{ 
+                    marginBottom: '1.5rem', 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '1rem'
+                  }}>
+                    <div>
+                      <h4 style={{ color: '#003d6b', marginBottom: '0.5rem', fontSize: '1.3rem' }}>
+                        {selectedSession.case_title || `Caso ${selectedSession.case_id}`}
+                      </h4>
+                      <p style={{ color: '#666', margin: 0 }}>
+                        Respuestas de {selectedSession.student_name || `Estudiante ${selectedSession.student_id}`}
+                      </p>
+                    </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => exportSessionDetailPDF(selectedSession, sessionAnswers)}
-                        className="btn-primary"
-                        style={{ padding: '0.5rem 1rem' }}
+                        className="btn-export"
                       >
                         📄 Exportar PDF
                       </button>
@@ -949,155 +1022,301 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                         onClick={() => { setSelectedSession(null); setSessionAnswers([]) }}
                         className="btn-secondary"
                       >
-                        ← Volver a lista
+                        ← Volver
                       </button>
                     </div>
                   </div>
 
                   <div style={{ 
-                    padding: '1rem', 
-                    backgroundColor: '#f5f5f5', 
-                    borderRadius: '4px',
-                    marginBottom: '1rem'
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '1rem',
+                    padding: '1.25rem', 
+                    backgroundColor: '#e3f2fd', 
+                    borderRadius: '8px',
+                    marginBottom: '1.5rem',
+                    borderLeft: '4px solid #1976d2'
                   }}>
-                    <p><strong>Estudiante:</strong> {selectedSession.student_name || `Estudiante ${selectedSession.student_id}`}</p>
-                    <p><strong>Caso:</strong> {selectedSession.case_title || `Caso ${selectedSession.case_id}`}</p>
-                    <p><strong>Fecha:</strong> {new Date(selectedSession.submitted_at).toLocaleString('es-CL')}</p>
-                    <p><strong>Total de respuestas:</strong> {sessionAnswers.length}</p>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#555', marginBottom: '0.25rem' }}>Estudiante</p>
+                      <p style={{ margin: 0, fontWeight: '600', color: '#003d6b' }}>
+                        {selectedSession.student_name || `Estudiante ${selectedSession.student_id}`}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#555', marginBottom: '0.25rem' }}>Fecha de Envío</p>
+                      <p style={{ margin: 0, fontWeight: '600', color: '#003d6b' }}>
+                        {new Date(selectedSession.submitted_at).toLocaleString('es-CL')}
+                      </p>
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.85rem', color: '#555', marginBottom: '0.25rem' }}>Total Respuestas</p>
+                      <p style={{ margin: 0, fontWeight: '600', color: '#003d6b' }}>
+                        {sessionAnswers.length} preguntas
+                      </p>
+                    </div>
                   </div>
 
-                  {sessionAnswers.map((answer, idx) => (
-                    <div key={answer.id} style={{
-                      border: '1px solid #ddd',
-                      borderRadius: '8px',
-                      padding: '1rem',
-                      marginBottom: '1rem',
-                      backgroundColor: 'white'
-                    }}>
-                      <h5>Pregunta {idx + 1}</h5>
-                      <p style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                        {answer.question_text}
-                      </p>
-
-                      {answer.answer_type === 'multiple_choice' ? (
-                        <>
-                          <p>
-                            <strong>Respuesta:</strong> {answer.student_answer || 'Sin responder'}
-                            {answer.is_correct !== null && (
-                              <span style={{ 
-                                marginLeft: '0.5rem',
-                                color: answer.is_correct ? 'green' : 'red',
-                                fontWeight: 'bold'
-                              }}>
-                                {answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}
-                              </span>
-                            )}
-                          </p>
-                          {!answer.is_correct && answer.correct_answer && (
-                            <p style={{ color: '#666', fontSize: '0.9rem' }}>
-                              <strong>Respuesta correcta:</strong> {answer.correct_answer}
-                            </p>
-                          )}
-                        </>
-                      ) : (
+                  <div style={{ display: 'grid', gap: '1.25rem' }}>
+                    {sessionAnswers.map((answer, idx) => (
+                      <div key={answer.id} style={{
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '10px',
+                        padding: '1.5rem',
+                        backgroundColor: 'white',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                        transition: 'box-shadow 0.3s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
+                      onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'}
+                      >
                         <div style={{ 
-                          padding: '0.75rem',
-                          backgroundColor: '#f9f9f9',
-                          borderRadius: '4px',
-                          marginTop: '0.5rem'
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'flex-start',
+                          marginBottom: '1rem',
+                          paddingBottom: '0.75rem',
+                          borderBottom: '1px solid #f0f0f0'
                         }}>
-                          <strong>Respuesta abierta:</strong>
-                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.5rem' }}>
-                            {answer.student_answer || 'Sin responder'}
-                          </p>
+                          <h5 style={{ 
+                            margin: 0, 
+                            color: '#003d6b',
+                            fontSize: '1.1rem',
+                            fontWeight: '600'
+                          }}>
+                            Pregunta {idx + 1}
+                          </h5>
+                          <span style={{
+                            padding: '0.25rem 0.75rem',
+                            backgroundColor: answer.answer_type === 'multiple_choice' ? '#e3f2fd' : '#fff3e0',
+                            color: answer.answer_type === 'multiple_choice' ? '#1976d2' : '#f57c00',
+                            borderRadius: '12px',
+                            fontSize: '0.8rem',
+                            fontWeight: '600'
+                          }}>
+                            {answer.answer_type === 'multiple_choice' ? '☑️ Selección' : '✍️ Abierta'}
+                          </span>
                         </div>
-                      )}
 
-                      <div style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                        <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                          Feedback del docente:
-                        </label>
-                        <textarea
-                          defaultValue={answer.feedback || ''}
-                          placeholder="Escribe retroalimentación aquí..."
-                          rows={3}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem',
-                            borderRadius: '4px',
-                            border: '1px solid #ddd',
-                            marginBottom: '0.5rem'
-                          }}
-                          id={`feedback-${answer.id}`}
-                        />
+                        <p style={{ 
+                          fontWeight: '500', 
+                          marginBottom: '1rem',
+                          color: '#333',
+                          fontSize: '1rem',
+                          lineHeight: '1.5'
+                        }}>
+                          {answer.question_text}
+                        </p>
 
-                        <button
-                          onClick={() => {
-                            const feedback = document.getElementById(`feedback-${answer.id}`).value
-                            updateAnswerFeedback(answer.id, feedback, null)
-                          }}
-                          className="btn-primary"
-                          style={{ padding: '0.5rem 1rem' }}
-                        >
-                          💾 Guardar Feedback
-                        </button>
+                        {answer.answer_type === 'multiple_choice' ? (
+                          <div style={{
+                            padding: '1rem',
+                            backgroundColor: answer.is_correct ? '#e8f5e9' : '#ffebee',
+                            borderRadius: '6px',
+                            marginBottom: '1rem',
+                            borderLeft: `4px solid ${answer.is_correct ? '#4caf50' : '#f44336'}`
+                          }}>
+                            <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#555' }}>
+                              Respuesta del estudiante:
+                            </p>
+                            <p style={{ margin: 0, fontSize: '1rem', color: '#333' }}>
+                              {answer.student_answer || 'Sin responder'}
+                              {answer.is_correct !== null && (
+                                <span style={{ 
+                                  marginLeft: '0.75rem',
+                                  fontWeight: 'bold',
+                                  color: answer.is_correct ? '#2e7d32' : '#c62828',
+                                  fontSize: '1.1rem'
+                                }}>
+                                  {answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}
+                                </span>
+                              )}
+                            </p>
+                            {!answer.is_correct && answer.correct_answer && (
+                              <p style={{ 
+                                marginTop: '0.75rem',
+                                paddingTop: '0.75rem',
+                                borderTop: '1px solid rgba(0,0,0,0.1)',
+                                color: '#2e7d32',
+                                fontWeight: '500',
+                                fontSize: '0.95rem'
+                              }}>
+                                <strong>Respuesta correcta:</strong> {answer.correct_answer}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ 
+                            padding: '1rem',
+                            backgroundColor: '#f8f9fa',
+                            borderRadius: '6px',
+                            marginBottom: '1rem',
+                            borderLeft: '4px solid #1976d2'
+                          }}>
+                            <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#555' }}>
+                              Respuesta abierta:
+                            </p>
+                            <p style={{ 
+                              whiteSpace: 'pre-wrap', 
+                              margin: 0,
+                              lineHeight: '1.6',
+                              color: '#333'
+                            }}>
+                              {answer.student_answer || 'Sin responder'}
+                            </p>
+                          </div>
+                        )}
+
+                        <div style={{ 
+                          marginTop: '1.25rem', 
+                          padding: '1rem',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '8px'
+                        }}>
+                          <label style={{ 
+                            display: 'block', 
+                            fontWeight: '600', 
+                            marginBottom: '0.75rem',
+                            color: '#003d6b',
+                            fontSize: '1rem'
+                          }}>
+                            💬 Feedback del docente:
+                          </label>
+                          <textarea
+                            defaultValue={answer.feedback || ''}
+                            placeholder="Escribe retroalimentación constructiva para el estudiante..."
+                            rows={4}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              borderRadius: '6px',
+                              border: '1px solid #ddd',
+                              marginBottom: '0.75rem',
+                              fontSize: '0.95rem',
+                              lineHeight: '1.5',
+                              fontFamily: 'inherit',
+                              resize: 'vertical'
+                            }}
+                            id={`feedback-${answer.id}`}
+                          />
+
+                          <button
+                            onClick={() => {
+                              const feedback = document.getElementById(`feedback-${answer.id}`).value
+                              updateAnswerFeedback(answer.id, feedback, null)
+                            }}
+                            className="btn-primary"
+                            style={{ 
+                              padding: '0.75rem 1.5rem',
+                              fontSize: '0.95rem',
+                              fontWeight: '600'
+                            }}
+                          >
+                            💾 Guardar Feedback
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <>
-                  {sessions.length > 0 && (
-                    <div style={{ marginBottom: '1rem', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                      <button 
-                        onClick={exportSessionsCSV}
-                        className="btn-primary"
-                        style={{ padding: '0.5rem 1rem' }}
-                      >
-                        📊 Exportar CSV
-                      </button>
-                      <button 
-                        onClick={exportSessionsPDF}
-                        className="btn-primary"
-                        style={{ padding: '0.5rem 1rem' }}
-                      >
-                        📄 Exportar PDF
-                      </button>
+                  {sessions.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center',
+                      padding: '4rem 2rem',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '8px',
+                      color: '#666'
+                    }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                      <h4 style={{ color: '#003d6b', marginBottom: '0.5rem' }}>No se encontraron sesiones</h4>
+                      <p>Usa los filtros superiores y presiona "Buscar Sesiones" para ver las respuestas de los estudiantes</p>
+                    </div>
+                  ) : (
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                      gap: '1.25rem'
+                    }}>
+                      {sessions.map(session => (
+                        <div
+                          key={session.id}
+                          style={{
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '10px',
+                            padding: '1.5rem',
+                            backgroundColor: 'white',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                            transition: 'all 0.3s ease',
+                            cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'
+                            e.currentTarget.style.transform = 'translateY(-2px)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'
+                            e.currentTarget.style.transform = 'translateY(0)'
+                          }}
+                          onClick={() => loadSessionAnswers(session.id)}
+                        >
+                          <div style={{ marginBottom: '1rem' }}>
+                            <h4 style={{ 
+                              margin: '0 0 0.5rem 0', 
+                              color: '#003d6b',
+                              fontSize: '1.1rem',
+                              fontWeight: '600'
+                            }}>
+                              {session.case_title?.substring(0, 60) || `Caso ${session.case_id}`}
+                            </h4>
+                            <p style={{ 
+                              margin: 0, 
+                              color: '#666',
+                              fontSize: '0.9rem'
+                            }}>
+                              📅 {new Date(session.submitted_at).toLocaleString('es-CL', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingTop: '1rem',
+                            borderTop: '1px solid #f0f0f0'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                              <span style={{ fontSize: '1.5rem' }}>👨‍🎓</span>
+                              <span style={{ fontWeight: '500', color: '#333' }}>
+                                {session.student_name || `Estudiante ${session.student_id}`}
+                              </span>
+                            </div>
+                            <button
+                              className="btn-view"
+                              style={{
+                                padding: '0.5rem 1rem',
+                                fontSize: '0.9rem',
+                                fontWeight: '600'
+                              }}
+                            >
+                              Ver →
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
-                  
-                  <div className="cases-table-container">
-                    <table className="cases-table">
-                      <thead>
-                        <tr>
-                          <th>Estudiante</th>
-                          <th>Caso</th>
-                          <th>Fecha</th>
-                          <th>Acciones</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                      {sessions.length === 0 ? (
-                        <tr>
-                          <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
-                            No se encontraron sesiones. Usa los filtros y presiona Buscar.
-                          </td>
-                        </tr>
-                      ) : (
-                        sessions.map(session => (
-                          <tr key={session.id}>
-                            <td>{session.student_name || `Estudiante ${session.student_id}`}</td>
-                            <td>{session.case_title?.substring(0, 60) || `Caso ${session.case_id}`}</td>
-                            <td>{new Date(session.submitted_at).toLocaleDateString('es-CL')}</td>
-                            <td>
-                              <button
-                                onClick={() => loadSessionAnswers(session.id)}
-                                className="btn-view"
-                              >
-                                👁️ Ver Respuestas
-                              </button>
-                            </td>
-                          </tr>
+                </>
+              )}
+            </div>
+          )}
                         ))
                       )}
                     </tbody>

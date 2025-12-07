@@ -257,6 +257,26 @@ export default function App({ onLogout }) {
   })
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [submittedAnswers, setSubmittedAnswers] = useState(false)
+  const [activeTab, setActiveTab] = useState('generate') // 'generate' or 'feedback'
+  const [myFeedback, setMyFeedback] = useState([])
+  const [loadingFeedback, setLoadingFeedback] = useState(false)
+
+  async function loadMyFeedback() {
+    if (!isStudentAuthenticated || !studentData) return
+    
+    setLoadingFeedback(true)
+    try {
+      const res = await fetch(`${API_BASE}/api/answers?student_id=${studentData.id}`)
+      const data = await res.json()
+      if (data.ok) {
+        setMyFeedback(data.sessions || [])
+      }
+    } catch (e) {
+      console.error('Error cargando feedback:', e)
+    } finally {
+      setLoadingFeedback(false)
+    }
+  }
 
   async function generateCase() {
     setLoading(true)
@@ -350,9 +370,16 @@ export default function App({ onLogout }) {
   async function fetchHistory() {
     setLoadingHistory(true)
     try {
-      const res = await fetch(`${API_BASE}/api/cases`)
+      let url = `${API_BASE}/api/cases`
+      // Filtrar por el estudiante logueado
+      if (studentData?.id) {
+        url += `?created_by=${studentData.id}`
+      }
+      const res = await fetch(url)
       const data = await res.json()
-      if (data.ok) setHistory(data.cases || [])
+      if (data.ok) {
+        setHistory(data.cases || [])
+      }
     } catch (e) {
       console.error('Error cargando historial', e)
     } finally {
@@ -363,6 +390,13 @@ export default function App({ onLogout }) {
   useEffect(() => {
     fetchHistory()
   }, [])
+
+  // Auto-abrir panel de docentes si ya está autenticado
+  useEffect(() => {
+    if (isAuthenticated && !isStudentAuthenticated) {
+      setShowTeacherPanel(true)
+    }
+  }, [isAuthenticated, isStudentAuthenticated])
 
   function handleLoginSuccess() {
     setIsAuthenticated(true)
@@ -565,13 +599,68 @@ export default function App({ onLogout }) {
           </div>
         </div>
       </header>
+
+      {/* Tabs de navegación para estudiantes */}
+      {isStudentAuthenticated && (
+        <div style={{
+          backgroundColor: 'white',
+          borderBottom: '2px solid #e0e0e0',
+          padding: '0 2rem'
+        }}>
+          <div style={{
+            maxWidth: '1400px',
+            margin: '0 auto',
+            display: 'flex',
+            gap: '2rem'
+          }}>
+            <button
+              onClick={() => setActiveTab('generate')}
+              style={{
+                padding: '1rem 1.5rem',
+                border: 'none',
+                background: 'none',
+                color: activeTab === 'generate' ? '#003d6b' : '#666',
+                borderBottom: activeTab === 'generate' ? '3px solid #003d6b' : '3px solid transparent',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: activeTab === 'generate' ? '600' : '400',
+                transition: 'all 0.2s'
+              }}
+            >
+              📝 Generar Casos
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('feedback')
+                loadMyFeedback()
+              }}
+              style={{
+                padding: '1rem 1.5rem',
+                border: 'none',
+                background: 'none',
+                color: activeTab === 'feedback' ? '#003d6b' : '#666',
+                borderBottom: activeTab === 'feedback' ? '3px solid #003d6b' : '3px solid transparent',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: activeTab === 'feedback' ? '600' : '400',
+                transition: 'all 0.2s'
+              }}
+            >
+              💬 Mi Feedback
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="container layout">
         <div className="main">
 
+      {activeTab === 'generate' ? (
+        <>
       <div className="config-panel">
         <h2 className="section-title">Configuración del Caso</h2>
         
-        <div className="form-group">
+        <div className="form-group">\n
           <label className="form-label">Temática</label>
           <select className="form-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
             {THEMES.map((t) => (
@@ -583,17 +672,17 @@ export default function App({ onLogout }) {
         <div className="form-group">
           <label className="form-label">Nivel de dificultad</label>
           <div className="radio-group">
-            <label className="radio-label">
+            <label className="radio-label" title="Casos simples con situaciones directas y respuestas claras. Ideal para familiarizarse con la metodología.">
               <input type="radio" name="difficulty" value="basico" checked={difficulty === 'basico'} onChange={() => setDifficulty('basico')} />
-              <span>Básico</span>
+              <span>Básico ℹ️</span>
             </label>
-            <label className="radio-label">
+            <label className="radio-label" title="Casos con mayor complejidad, variables múltiples y situaciones que requieren análisis más profundo.">
               <input type="radio" name="difficulty" value="intermedio" checked={difficulty === 'intermedio'} onChange={() => setDifficulty('intermedio')} />
-              <span>Intermedio</span>
+              <span>Intermedio ℹ️</span>
             </label>
-            <label className="radio-label">
+            <label className="radio-label" title="Casos complejos con múltiples actores, factores de riesgo entrelazados y dilemas éticos. Requiere pensamiento crítico avanzado.">
               <input type="radio" name="difficulty" value="avanzado" checked={difficulty === 'avanzado'} onChange={() => setDifficulty('avanzado')} />
-              <span>Avanzado</span>
+              <span>Avanzado ℹ️</span>
             </label>
           </div>
         </div>
@@ -784,9 +873,168 @@ export default function App({ onLogout }) {
           </div>
         )}
       </div>
+      </> 
+      ) : (
+        /* Vista de Feedback del Estudiante */
+        <div style={{ padding: '2rem' }}>
+          <h2 style={{ marginBottom: '1.5rem', color: '#003d6b' }}>💬 Mi Feedback de Casos Resueltos</h2>
+          
+          {loadingFeedback ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
+              Cargando feedback...
+            </div>
+          ) : myFeedback.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '3rem', color: '#666', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+              <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>📭 No tienes casos resueltos aún</p>
+              <p>Resuelve algunos casos y vuelve aquí para ver el feedback de tu docente</p>
+              <button 
+                onClick={() => setActiveTab('generate')}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#003d6b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Ir a Generar Casos
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              {myFeedback.map((session) => (
+                <div key={session.session_id} style={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '8px',
+                  padding: '1.5rem',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'flex-start',
+                    marginBottom: '1rem',
+                    paddingBottom: '1rem',
+                    borderBottom: '1px solid #e0e0e0'
+                  }}>
+                    <div>
+                      <h3 style={{ color: '#003d6b', marginBottom: '0.5rem' }}>
+                        {session.case_title || `Caso ${session.case_id}`}
+                      </h3>
+                      <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
+                        📅 {new Date(session.submitted_at).toLocaleDateString('es-CL', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                    <span style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#e3f2fd',
+                      color: '#1976d2',
+                      borderRadius: '20px',
+                      fontSize: '0.85rem',
+                      fontWeight: '600'
+                    }}>
+                      {session.answers?.length || 0} respuestas
+                    </span>
+                  </div>
+
+                  {session.answers && session.answers.length > 0 ? (
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                      {session.answers.map((answer, idx) => (
+                        <div key={answer.id} style={{
+                          padding: '1rem',
+                          backgroundColor: '#f8f9fa',
+                          borderRadius: '6px',
+                          borderLeft: answer.feedback ? '4px solid #4caf50' : '4px solid #e0e0e0'
+                        }}>
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <strong style={{ color: '#333' }}>Pregunta {idx + 1}:</strong>
+                            <p style={{ margin: '0.5rem 0', color: '#555' }}>{answer.question_text}</p>
+                          </div>
+
+                          <div style={{ marginBottom: '0.75rem' }}>
+                            <strong style={{ fontSize: '0.9rem', color: '#666' }}>Tu respuesta:</strong>
+                            <p style={{ 
+                              margin: '0.5rem 0', 
+                              color: '#333',
+                              backgroundColor: 'white',
+                              padding: '0.75rem',
+                              borderRadius: '4px'
+                            }}>
+                              {answer.student_answer || 'Sin respuesta'}
+                              {answer.answer_type === 'multiple_choice' && answer.is_correct !== null && (
+                                <span style={{ 
+                                  marginLeft: '0.75rem',
+                                  fontWeight: 'bold',
+                                  color: answer.is_correct ? '#4caf50' : '#f44336'
+                                }}>
+                                  {answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+
+                          {answer.feedback ? (
+                            <div style={{
+                              marginTop: '1rem',
+                              padding: '1rem',
+                              backgroundColor: 'white',
+                              borderRadius: '4px',
+                              border: '1px solid #4caf50'
+                            }}>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem',
+                                marginBottom: '0.5rem'
+                              }}>
+                                <span style={{ fontSize: '1.2rem' }}>👨‍🏫</span>
+                                <strong style={{ color: '#4caf50' }}>Feedback del Docente:</strong>
+                              </div>
+                              <p style={{ 
+                                margin: 0, 
+                                color: '#333',
+                                lineHeight: '1.6',
+                                whiteSpace: 'pre-wrap'
+                              }}>
+                                {answer.feedback}
+                              </p>
+                            </div>
+                          ) : (
+                            <div style={{
+                              marginTop: '1rem',
+                              padding: '0.75rem',
+                              backgroundColor: '#fff3cd',
+                              borderRadius: '4px',
+                              border: '1px solid #ffc107',
+                              fontSize: '0.9rem',
+                              color: '#856404'
+                            }}>
+                              ⏳ Esperando feedback del docente
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: '#666', fontStyle: 'italic' }}>No hay respuestas registradas para esta sesión</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       </div>
 
-      <aside className="sidebar">
+      <aside className="sidebar">\n
         <div className="sidebar-header">
           <h2 className="sidebar-title">📚 Historial</h2>
           <button className="btn-secondary" onClick={fetchHistory} disabled={loadingHistory}>

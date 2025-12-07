@@ -176,7 +176,7 @@ def save_case(db_path: str, case_obj: Dict) -> Dict:
     }
 
 
-def list_cases(db_path: str, theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50, status: Optional[str] = None) -> List[Dict]:
+def list_cases(db_path: str, theme: Optional[str] = None, difficulty: Optional[str] = None, limit: int = 50, status: Optional[str] = None, created_by: Optional[int] = None) -> List[Dict]:
     conn = _connect(db_path)
     cur = conn.cursor()
     query = "SELECT id, case_id, title, theme, difficulty, payload, created_at, updated_at, status, rating, tags, notes FROM cases"
@@ -191,6 +191,9 @@ def list_cases(db_path: str, theme: Optional[str] = None, difficulty: Optional[s
     if status:
         where.append("status = ?")
         params.append(status)
+    if created_by:
+        where.append("created_by = ?")
+        params.append(created_by)
     if where:
         query += " WHERE " + " AND ".join(where)
     query += " ORDER BY id DESC LIMIT ?"
