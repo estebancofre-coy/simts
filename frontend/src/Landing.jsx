@@ -36,6 +36,7 @@ export default function Landing() {
           <nav style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
             <a href="#inicio" style={{ color: '#003d6b', textDecoration: 'none', cursor: 'pointer', fontWeight: '500', fontSize: '0.95rem' }}>Inicio</a>
             <a href="#beneficios" style={{ color: '#003d6b', textDecoration: 'none', cursor: 'pointer', fontWeight: '500', fontSize: '0.95rem' }}>Beneficios</a>
+            <a href="#workflow" style={{ color: '#003d6b', textDecoration: 'none', cursor: 'pointer', fontWeight: '500', fontSize: '0.95rem' }}>¿Cómo funciona?</a>
             <a href="#contacto" style={{ color: '#003d6b', textDecoration: 'none', cursor: 'pointer', fontWeight: '500', fontSize: '0.95rem' }}>Contacto</a>
             <button
               onClick={() => navigate('/app')}
@@ -210,6 +211,130 @@ export default function Landing() {
                 </p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Workflow Section */}
+      <section id="workflow" style={{
+        padding: '5rem 2rem',
+        backgroundColor: 'white'
+      }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ 
+              fontSize: '2.5rem', 
+              marginBottom: '1rem', 
+              color: '#1a1a1a',
+              fontWeight: '700'
+            }}>
+              ¿Cómo funciona SimTS?
+            </h2>
+            <p style={{ 
+              fontSize: '1.1rem',
+              color: '#4a5568',
+              lineHeight: '1.7',
+              maxWidth: '700px',
+              margin: '0 auto'
+            }}>
+              Un proceso simple y estructurado para simular casos clínicos interactivos
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+            gap: '2rem',
+            marginBottom: '3rem'
+          }}>
+            {[
+              {
+                step: '1',
+                title: 'Selección del Caso',
+                description: 'El estudiante accede y selecciona un caso clínico de la biblioteca disponible',
+                color: '#003d6b'
+              },
+              {
+                step: '2',
+                title: 'Interacción Guiada',
+                description: 'Realiza preguntas al paciente virtual y analiza los síntomas presentados',
+                color: '#005a9e'
+              },
+              {
+                step: '3',
+                title: 'Toma de Decisiones',
+                description: 'Solicita exámenes, interpreta resultados y desarrolla un diagnóstico',
+                color: '#0077cc'
+              },
+              {
+                step: '4',
+                title: 'Retroalimentación IA',
+                description: 'Recibe feedback inteligente sobre tu razonamiento clínico y decisiones',
+                color: '#00a0e3'
+              }
+            ].map((item, index) => (
+              <div key={index} style={{
+                backgroundColor: '#f8fafb',
+                padding: '2rem',
+                borderRadius: '12px',
+                position: 'relative',
+                transition: 'transform 0.3s ease',
+                cursor: 'default'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '50%',
+                  backgroundColor: item.color,
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.5rem',
+                  fontWeight: '700',
+                  marginBottom: '1.5rem'
+                }}>
+                  {item.step}
+                </div>
+                <h3 style={{
+                  fontSize: '1.3rem',
+                  marginBottom: '0.75rem',
+                  color: '#1a1a1a',
+                  fontWeight: '600'
+                }}>
+                  {item.title}
+                </h3>
+                <p style={{
+                  fontSize: '1rem',
+                  color: '#4a5568',
+                  lineHeight: '1.6',
+                  margin: 0
+                }}>
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Visual Flow Indicator */}
+          <div style={{
+            textAlign: 'center',
+            padding: '2rem',
+            backgroundColor: '#f8fafb',
+            borderRadius: '12px',
+            border: '2px solid #003d6b'
+          }}>
+            <p style={{
+              fontSize: '1.1rem',
+              color: '#003d6b',
+              fontWeight: '600',
+              margin: 0
+            }}>
+              💡 Resultado: Mejora continua del razonamiento clínico y toma de decisiones basada en evidencia
+            </p>
           </div>
         </div>
       </section>
