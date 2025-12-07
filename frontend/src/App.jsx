@@ -234,6 +234,7 @@ export default function App({ onLogout }) {
   const [competency, setCompetency] = useState('')
   const [caseLength, setCaseLength] = useState('medio')
   const [caseObj, setCaseObj] = useState(null)
+  const [caseDbId, setCaseDbId] = useState(null) // ID del caso en la base de datos
   const [responseText, setResponseText] = useState('')
   const [loading, setLoading] = useState(false)
   const [history, setHistory] = useState([])
@@ -260,6 +261,7 @@ export default function App({ onLogout }) {
   async function generateCase() {
     setLoading(true)
     setCaseObj(null)
+    setCaseDbId(null)
     setOpenAnswers({})
     setResponseText('⏳ Generando caso... Esto puede tomar entre 30-60 segundos.')
     const startTime = Date.now()
@@ -310,6 +312,11 @@ export default function App({ onLogout }) {
       
       if (data.case) {
         setCaseObj(data.case)
+        // Guardar el ID del caso en la DB si fue guardado exitosamente
+        if (data.saved && data.saved.id) {
+          setCaseDbId(data.saved.id)
+          console.log('💾 Caso guardado en DB con ID:', data.saved.id)
+        }
         setResponseText('')
         // Mostrar métricas en consola
         console.log('✅ Caso generado exitosamente')
@@ -392,44 +399,37 @@ export default function App({ onLogout }) {
       return
     }
 
-    // Recopilar respuestas del QuestionsList
-    const questionsElement = document.querySelector('[data-questions-list]')
-    if (!questionsElement) {
-      alert('No se encontraron preguntas para enviar')
+    if (!caseDbId) {
+      alert('⚠️ Error: El caso no se guardó correctamente en la base de datos. Por favor, genera un nuevo caso.')
+      console.error('caseDbId is null - case was not saved to database')
       return
     }
 
-    // Obtener respuestas seleccionadas desde el componente QuestionsList
-    const selectedAnswers = {}
-    caseObj.questions.forEach((q, idx) => {
-      const checkedInput = document.querySelector(`input[name="q${idx}"]:checked`)
-      if (checkedInput) {
-        selectedAnswers[idx] = parseInt(checkedInput.value)
-      }
-    })
-
-    // Preparar array de respuestas para el backend
+    // Preparar array de respuestas en el formato que espera el backend
     const answers = caseObj.questions.map((q, idx) => {
       const isOpenEnded = !q.options || q.options.length === 0
       
       if (isOpenEnded) {
+        // Pregunta abierta
         return {
-          question_text: q.question,
-          answer_type: 'open',
-          student_answer: openAnswers[idx] || '',
-          is_correct: null
+          question_index: idx,
+          open_answer: openAnswers[idx] || '',
+          selected_option: null
         }
       } else {
-        const selectedIndex = selectedAnswers[idx]
+        // Pregunta de opción múltiple
+        const checkedInput = document.querySelector(`input[name="q${idx}"]:checked`)
+        const selectedIndex = checkedInput ? parseInt(checkedInput.value) : null
+        
         return {
-          question_text: q.question,
-          answer_type: 'multiple_choice',
-          student_answer: selectedIndex !== undefined ? q.options[selectedIndex] : null,
-          correct_answer: q.correctAnswer,
-          is_correct: selectedIndex === q.correctAnswer
+          question_index: idx,
+          selected_option: selectedIndex,
+          open_answer: null
         }
       }
     })
+
+    console.log('📤 Enviando respuestas:', { case_id: caseDbId, answers })
 
     try {
       const token = localStorage.getItem('studentToken')
@@ -440,20 +440,26 @@ export default function App({ onLogout }) {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          case_id: caseObj.id,
+          case_id: caseDbId,
           answers: answers
         })
       })
 
       const data = await response.json()
+      console.log('📥 Respuesta del servidor:', data)
 
       if (!response.ok || !data.ok) {
-        throw new Error(data.error || 'Error al enviar respuestas')
+        throw new Error(data.error || data.detail || 'Error al enviar respuestas')
       }
 
       setCurrentSessionId(data.session_id)
       setSubmittedAnswers(true)
-      alert(`✅ Respuestas enviadas correctamente!\n\nPuntaje: ${data.score}/${data.total}\nSesión ID: ${data.session_id}`)
+      
+      // Usar el score del backend si está disponible
+      const score = data.score !== undefined ? data.score : 0
+      const total = data.total !== undefined ? data.total : 0
+
+      alert(`✅ Respuestas enviadas correctamente!\n\nPuntaje: ${score}/${total}\nSesión ID: ${data.session_id}`)
     } catch (err) {
       console.error('Error enviando respuestas:', err)
       alert('Error al enviar respuestas: ' + err.message)
@@ -805,7 +811,12 @@ export default function App({ onLogout }) {
                 </div>
                 <button 
                   className="btn-load" 
-                  onClick={() => { setCaseObj(c.payload); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  onClick={() => { 
+                    setCaseObj(c.payload); 
+                    setCaseDbId(c.id); // Guardar el ID de la DB
+                    setSubmittedAnswers(false); // Reset del estado de envío
+                    window.scrollTo({ top: 0, behavior: 'smooth' }) 
+                  }}
                 >
                   Ver caso
                 </button>

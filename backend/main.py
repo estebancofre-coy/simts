@@ -537,6 +537,9 @@ async def submit_answers(req: SubmitAnswersRequest):
         case = _db.get_case(DB_PATH, req.case_id)
         questions = case.get("payload", {}).get("questions", []) if case else []
         
+        score = 0
+        total = 0
+        
         for ans in req.answers:
             q_idx = ans.get("question_index")
             selected = ans.get("selected_option")
@@ -547,13 +550,22 @@ async def submit_answers(req: SubmitAnswersRequest):
                 q = questions[q_idx]
                 correct_idx = q.get("correct_index") or q.get("correctIndex")
                 if correct_idx is not None:
+                    total += 1
                     is_correct = 1 if selected == correct_idx else 0
+                    if is_correct:
+                        score += 1
             
             _db.save_answer(DB_PATH, session_id, q_idx, selected, open_ans, is_correct)
         
         _db.submit_session(DB_PATH, session_id, req.duration_seconds)
         
-        return {"ok": True, "session_id": session_id, "message": "Respuestas enviadas exitosamente"}
+        return {
+            "ok": True, 
+            "session_id": session_id, 
+            "score": score,
+            "total": total,
+            "message": "Respuestas enviadas exitosamente"
+        }
     except Exception as e:
         logger.exception("Error guardando respuestas")
         raise HTTPException(status_code=500, detail=str(e))
