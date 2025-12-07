@@ -141,14 +141,12 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
       return
     }
 
-    const headers = ['Estudiante', 'Caso', 'Fecha', 'Puntaje', 'Total', 'Porcentaje']
+    const headers = ['Estudiante', 'Caso', 'Fecha', 'Respuestas']
     const rows = sessions.map(s => [
       s.student_name || `Estudiante ${s.student_id}`,
       (s.case_title || `Caso ${s.case_id}`).replace(/,/g, ';'),
       new Date(s.submitted_at).toLocaleString('es-CL'),
-      s.score,
-      s.total,
-      `${Math.round((s.score / s.total) * 100)}%`
+      s.answers?.length || 0
     ])
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
@@ -180,12 +178,11 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
       s.student_name || `Est. ${s.student_id}`,
       (s.case_title || `Caso ${s.case_id}`).substring(0, 40),
       new Date(s.submitted_at).toLocaleDateString('es-CL'),
-      `${s.score}/${s.total}`,
-      `${Math.round((s.score / s.total) * 100)}%`
+      s.answers?.length || 0
     ])
 
     doc.autoTable({
-      head: [['Estudiante', 'Caso', 'Fecha', 'Puntaje', '%']],
+      head: [['Estudiante', 'Caso', 'Fecha', 'N° Respuestas']],
       body: tableData,
       startY: 35,
       styles: { fontSize: 9 },
@@ -205,9 +202,8 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
     doc.text(`Estudiante: ${session.student_name || `Estudiante ${session.student_id}`}`, 14, 30)
     doc.text(`Caso: ${session.case_title || `Caso ${session.case_id}`}`, 14, 37)
     doc.text(`Fecha: ${new Date(session.submitted_at).toLocaleString('es-CL')}`, 14, 44)
-    doc.text(`Puntaje: ${session.score}/${session.total} (${Math.round((session.score / session.total) * 100)}%)`, 14, 51)
     
-    let yPos = 60
+    let yPos = 55
     
     answers.forEach((answer, idx) => {
       if (yPos > 260) {
@@ -243,11 +239,6 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
         doc.setFont(undefined, 'italic')
         doc.text('Feedback: ' + answer.feedback, 14, yPos)
         doc.setFont(undefined, 'normal')
-        yPos += 5
-      }
-      
-      if (answer.score !== null) {
-        doc.text(`Puntaje: ${answer.score}/100`, 14, yPos)
         yPos += 5
       }
       
@@ -969,9 +960,10 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                     borderRadius: '4px',
                     marginBottom: '1rem'
                   }}>
+                    <p><strong>Estudiante:</strong> {selectedSession.student_name || `Estudiante ${selectedSession.student_id}`}</p>
+                    <p><strong>Caso:</strong> {selectedSession.case_title || `Caso ${selectedSession.case_id}`}</p>
                     <p><strong>Fecha:</strong> {new Date(selectedSession.submitted_at).toLocaleString('es-CL')}</p>
-                    <p><strong>Tiempo:</strong> {selectedSession.time_spent ? `${selectedSession.time_spent} segundos` : 'N/A'}</p>
-                    <p><strong>Puntaje:</strong> {selectedSession.score}/{selectedSession.total}</p>
+                    <p><strong>Total de respuestas:</strong> {sessionAnswers.length}</p>
                   </div>
 
                   {sessionAnswers.map((answer, idx) => (
@@ -1039,34 +1031,16 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                           id={`feedback-${answer.id}`}
                         />
 
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <label>Puntaje:</label>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            defaultValue={answer.score || ''}
-                            placeholder="0-100"
-                            style={{
-                              width: '80px',
-                              padding: '0.5rem',
-                              borderRadius: '4px',
-                              border: '1px solid #ddd'
-                            }}
-                            id={`score-${answer.id}`}
-                          />
-                          <button
-                            onClick={() => {
-                              const feedback = document.getElementById(`feedback-${answer.id}`).value
-                              const score = parseFloat(document.getElementById(`score-${answer.id}`).value)
-                              updateAnswerFeedback(answer.id, feedback, score || null)
-                            }}
-                            className="btn-primary"
-                            style={{ padding: '0.5rem 1rem' }}
-                          >
-                            💾 Guardar
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => {
+                            const feedback = document.getElementById(`feedback-${answer.id}`).value
+                            updateAnswerFeedback(answer.id, feedback, null)
+                          }}
+                          className="btn-primary"
+                          style={{ padding: '0.5rem 1rem' }}
+                        >
+                          💾 Guardar Feedback
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -1098,15 +1072,14 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                         <tr>
                           <th>Estudiante</th>
                           <th>Caso</th>
-                        <th>Fecha</th>
-                        <th>Puntaje</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                          <th>Fecha</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                       {sessions.length === 0 ? (
                         <tr>
-                          <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+                          <td colSpan="4" style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
                             No se encontraron sesiones. Usa los filtros y presiona Buscar.
                           </td>
                         </tr>
@@ -1116,16 +1089,6 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                             <td>{session.student_name || `Estudiante ${session.student_id}`}</td>
                             <td>{session.case_title?.substring(0, 60) || `Caso ${session.case_id}`}</td>
                             <td>{new Date(session.submitted_at).toLocaleDateString('es-CL')}</td>
-                            <td>
-                              <strong>{session.score}/{session.total}</strong>
-                              <span style={{ 
-                                marginLeft: '0.5rem',
-                                fontSize: '0.9rem',
-                                color: '#666'
-                              }}>
-                                ({Math.round((session.score / session.total) * 100)}%)
-                              </span>
-                            </td>
                             <td>
                               <button
                                 onClick={() => loadSessionAnswers(session.id)}

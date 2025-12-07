@@ -454,12 +454,8 @@ export default function App({ onLogout }) {
 
       setCurrentSessionId(data.session_id)
       setSubmittedAnswers(true)
-      
-      // Usar el score del backend si está disponible
-      const score = data.score !== undefined ? data.score : 0
-      const total = data.total !== undefined ? data.total : 0
 
-      alert(`✅ Respuestas enviadas correctamente!\n\nPuntaje: ${score}/${total}\nSesión ID: ${data.session_id}`)
+      alert(`✅ Respuestas enviadas correctamente!\n\nTus respuestas han sido registradas y están disponibles para revisión del docente.\n\nSesión ID: ${data.session_id}`)
     } catch (err) {
       console.error('Error enviando respuestas:', err)
       alert('Error al enviar respuestas: ' + err.message)

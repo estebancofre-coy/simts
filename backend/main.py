@@ -572,12 +572,64 @@ async def submit_answers(req: SubmitAnswersRequest):
 
 
 @app.get("/api/answers")
-async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, limit: int = 100):
+async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, session_id: Optional[int] = None, limit: int = 100):
     """Obtiene respuestas (para docentes o estudiante propio)."""
     try:
-        sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
+        if session_id:
+            # Si se solicita una sesión específica, cargar solo esa
+            sessions = _db.get_student_sessions(DB_PATH, limit=1)
+            sessions = [s for s in sessions if s.get("session_id") == session_id]
+        else:
+            sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
+        
         for sess in sessions:
-            sess["answers"] = _db.get_session_answers(DB_PATH, sess["session_id"])
+            # Obtener respuestas de la sesión
+            answers = _db.get_session_answers(DB_PATH, sess["session_id"])
+            
+            # Enriquecer respuestas con información del caso
+            case = _db.get_case(DB_PATH, sess["case_id"]) if sess.get("case_id") else None
+            questions = case.get("payload", {}).get("questions", []) if case else []
+            
+            enriched_answers = []
+            for answer in answers:
+                q_idx = answer["question_index"]
+                if q_idx < len(questions):
+                    question = questions[q_idx]
+                    
+                    # Determinar tipo de pregunta
+                    is_open = not question.get("options") or len(question.get("options", [])) == 0
+                    
+                    enriched = {
+                        **answer,
+                        "question_text": question.get("question") or question.get("text", f"Pregunta {q_idx + 1}"),
+                        "answer_type": "open" if is_open else "multiple_choice"
+                    }
+                    
+                    # Si es múltiple opción, agregar la opción seleccionada y la correcta
+                    if not is_open:
+                        options = question.get("options", [])
+                        selected_idx = answer.get("selected_option")
+                        
+                        if selected_idx is not None and selected_idx < len(options):
+                            enriched["student_answer"] = options[selected_idx]
+                        else:
+                            enriched["student_answer"] = None
+                        
+                        # Obtener respuesta correcta
+                        correct_idx = question.get("correct_index") or question.get("correctIndex")
+                        if correct_idx is not None and correct_idx < len(options):
+                            enriched["correct_answer"] = options[correct_idx]
+                        
+                        # Agregar todas las opciones para referencia
+                        enriched["options"] = options
+                    else:
+                        # Para preguntas abiertas, usar el texto guardado
+                        enriched["student_answer"] = answer.get("open_answer")
+                    
+                    enriched_answers.append(enriched)
+            
+            sess["answers"] = enriched_answers
+            
         return {"ok": True, "sessions": sessions}
     except Exception as e:
         logger.exception("Error obteniendo respuestas")
