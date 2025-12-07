@@ -31,151 +31,245 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero Section - Redesigned */}
       <section id="inicio" style={{
-        background: 'linear-gradient(135deg, #003d6b 0%, #005a9e 100%)',
+        background: 'linear-gradient(135deg, #003d6b 0%, #005a9e 50%, #003d6b 100%)',
         color: 'white',
-        padding: '4rem 2rem',
-        textAlign: 'center'
+        padding: '6rem 2rem',
+        textAlign: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: 'inset 0 -20px 40px rgba(0,0,0,0.15)'
       }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+        {/* Background decoration */}
+        <div style={{
+          position: 'absolute',
+          top: -100,
+          right: -100,
+          width: '300px',
+          height: '300px',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%)',
+          borderRadius: '50%'
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          bottom: -50,
+          left: -50,
+          width: '200px',
+          height: '200px',
+          background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 70%)',
+          borderRadius: '50%'
+        }}></div>
+
+        <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <img 
             src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png"
             alt="Logo Trabajo Social"
-            style={{ height: '120px', marginBottom: '2rem' }}
+            style={{ height: '100px', marginBottom: '2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
           />
-          <h1 style={{ fontSize: '3rem', marginBottom: '1rem', fontWeight: 'bold' }}>
-            SimTS - Simulador de Casos de Trabajo Social
+          
+          <h1 style={{ 
+            fontSize: '3.5rem', 
+            marginBottom: '0.5rem', 
+            fontWeight: '900',
+            background: 'linear-gradient(135deg, #ffffff 0%, #e8f1ff 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            textShadow: '0 2px 10px rgba(0,0,0,0.2)',
+            letterSpacing: '-0.5px'
+          }}>
+            SimTS
           </h1>
-          <p style={{ fontSize: '1.3rem', marginBottom: '2rem', opacity: 0.95 }}>
-            Plataforma de aprendizaje interactivo basada en IA para estudiantes y docentes de Trabajo Social
-          </p>
-          <p style={{ fontSize: '1rem', marginBottom: '3rem', opacity: 0.85 }}>
-            Genera casos reales, resuelve dilemas éticos y recibe retroalimentación profesional
+          
+          <div style={{
+            display: 'inline-block',
+            backgroundColor: 'white',
+            color: '#003d6b',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '50px',
+            fontSize: '1.1rem',
+            fontWeight: '700',
+            marginBottom: '2rem',
+            boxShadow: '0 8px 20px rgba(0,0,0,0.2)',
+            letterSpacing: '0.5px'
+          }}>
+            🎓 Simulador de Casos Interactivo
+          </div>
+
+          <p style={{ 
+            fontSize: '1.4rem', 
+            marginBottom: '1.5rem', 
+            opacity: 0.98,
+            fontWeight: '500',
+            lineHeight: '1.6'
+          }}>
+            Aprendizaje experiencial basado en IA para futuros profesionales del Trabajo Social
           </p>
           
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <p style={{ 
+            fontSize: '1rem', 
+            marginBottom: '3.5rem', 
+            opacity: 0.85,
+            maxWidth: '800px',
+            margin: '0 auto 3.5rem auto',
+            lineHeight: '1.7'
+          }}>
+            Experimenta casos reales, desarrolla competencias éticas, y recibe retroalimentación profesional en una plataforma segura e integrada
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={() => navigate('/app')}
               style={{
-                padding: '1rem 2rem',
-                fontSize: '1rem',
-                backgroundColor: '#4CAF50',
-                color: 'white',
+                padding: '1.2rem 3rem',
+                fontSize: '1.1rem',
+                backgroundColor: 'white',
+                color: '#003d6b',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '50px',
                 cursor: 'pointer',
-                fontWeight: 'bold',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                transition: 'all 0.3s'
+                fontWeight: '900',
+                boxShadow: '0 8px 25px rgba(0,0,0,0.25)',
+                transition: 'all 0.3s ease',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase'
               }}
               onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#45a049'
-                e.target.style.transform = 'translateY(-2px)'
-                e.target.style.boxShadow = '0 6px 8px rgba(0,0,0,0.3)'
+                e.target.style.transform = 'translateY(-3px) scale(1.05)'
+                e.target.style.boxShadow = '0 12px 35px rgba(0,0,0,0.35)'
               }}
               onMouseOut={(e) => {
-                e.target.style.backgroundColor = '#4CAF50'
-                e.target.style.transform = 'translateY(0)'
-                e.target.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)'
+                e.target.style.transform = 'translateY(0) scale(1)'
+                e.target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.25)'
               }}
             >
-              👨‍🎓 Acceso Estudiantes
+              👨‍🎓 Soy Estudiante
             </button>
             <button
               onClick={() => navigate('/app')}
               style={{
-                padding: '1rem 2rem',
-                fontSize: '1rem',
-                backgroundColor: '#005a9e',
+                padding: '1.2rem 3rem',
+                fontSize: '1.1rem',
+                backgroundColor: 'transparent',
                 color: 'white',
-                border: 'none',
-                borderRadius: '8px',
+                border: '3px solid white',
+                borderRadius: '50px',
                 cursor: 'pointer',
-                fontWeight: 'bold',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.2)',
-                transition: 'all 0.3s'
+                fontWeight: '900',
+                boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+                transition: 'all 0.3s ease',
+                letterSpacing: '0.5px',
+                textTransform: 'uppercase',
+                backdropFilter: 'blur(10px)'
               }}
               onMouseOver={(e) => {
-                e.target.style.backgroundColor = '#003d6b'
-                e.target.style.transform = 'translateY(-2px)'
-                e.target.style.boxShadow = '0 6px 8px rgba(0,0,0,0.3)'
+                e.target.style.backgroundColor = 'rgba(255,255,255,0.15)'
+                e.target.style.transform = 'translateY(-3px)'
+                e.target.style.boxShadow = '0 12px 35px rgba(0,0,0,0.25)'
               }}
               onMouseOut={(e) => {
-                e.target.style.backgroundColor = '#005a9e'
+                e.target.style.backgroundColor = 'transparent'
                 e.target.style.transform = 'translateY(0)'
-                e.target.style.boxShadow = '0 4px 6px rgba(0,0,0,0.2)'
+                e.target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)'
               }}
             >
-              👨‍🏫 Acceso Académicos
+              👨‍🏫 Soy Docente
             </button>
           </div>
         </div>
       </section>
 
-      {/* Utilidad Section */}
+      {/* Utilidad Section - Redesigned */}
       <section id="utilidad" style={{
-        padding: '4rem 2rem',
-        backgroundColor: '#f5f5f5'
+        padding: '5rem 2rem',
+        background: 'linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%)',
+        position: 'relative'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '3rem', textAlign: 'center', color: '#003d6b' }}>
-            ¿Por Qué SimTS?
-          </h2>
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ 
+              fontSize: '2.8rem', 
+              marginBottom: '1rem', 
+              color: '#003d6b',
+              fontWeight: '900',
+              letterSpacing: '-0.5px'
+            }}>
+              ¿Por Qué SimTS?
+            </h2>
+            <p style={{
+              fontSize: '1.2rem',
+              color: '#666',
+              maxWidth: '600px',
+              margin: '0 auto',
+              lineHeight: '1.6'
+            }}>
+              Transformamos la educación en Trabajo Social con tecnología de punta y metodología pedagógica
+            </p>
+          </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2.5rem' }}>
             {[
               {
                 icon: '🎯',
                 title: 'Aprendizaje Práctico',
-                desc: 'Casos reales y contextalizados de la Región de Aysén que simulan situaciones que enfrentarás como profesional'
+                desc: 'Casos reales contextualizados de la Región de Aysén que simulan situaciones que enfrentarás como profesional',
+                color: '#ff6b6b'
               },
               {
                 icon: '🤖',
                 title: 'Generación Inteligente',
-                desc: 'Casos generados por IA que se adaptan a tu nivel de dificultad y areas de interés'
+                desc: 'Casos generados por IA que se adaptan a tu nivel de dificultad y áreas de interés',
+                color: '#4dabf7'
               },
               {
                 icon: '📊',
                 title: 'Retroalimentación Inmediata',
-                desc: 'Recibe calificaciones automáticas en respuestas de opción múltiple y comentarios de docentes en respuestas abiertas'
+                desc: 'Recibe calificaciones automáticas y comentarios de docentes en respuestas abiertas',
+                color: '#51cf66'
               },
               {
                 icon: '📈',
                 title: 'Seguimiento de Progreso',
-                desc: 'Docentes pueden rastrear tu evolución y brindarte apoyo personalizado'
+                desc: 'Docentes pueden rastrear tu evolución y brindarte apoyo personalizado',
+                color: '#ffd93d'
               },
               {
                 icon: '🔐',
                 title: 'Entorno Seguro',
-                desc: 'Practica y comete errores sin consecuencias en un ambiente de aprendizaje seguro'
+                desc: 'Practica y comete errores sin consecuencias en un ambiente de aprendizaje seguro',
+                color: '#a78bfa'
               },
               {
                 icon: '💼',
                 title: 'Preparación Profesional',
-                desc: 'Desarrolla habilidades críticas para intervención social comunitaria y familiar'
+                desc: 'Desarrolla habilidades críticas para intervención social comunitaria y familiar',
+                color: '#06b6d4'
               }
             ].map((item, idx) => (
               <div key={idx} style={{
                 backgroundColor: 'white',
-                padding: '2rem',
-                borderRadius: '8px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                transition: 'all 0.3s',
-                cursor: 'pointer'
+                padding: '2.5rem',
+                borderRadius: '12px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+                transition: 'all 0.4s cubic-bezier(0.23, 1, 0.320, 1)',
+                cursor: 'pointer',
+                position: 'relative',
+                borderTop: `4px solid ${item.color}`,
+                overflow: 'hidden'
               }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.15)'
-                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 12px 30px rgba(0,0,0,0.15)'
+                  e.currentTarget.style.transform = 'translateY(-8px)'
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.08)'
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{item.icon}</div>
-                <h3 style={{ marginBottom: '0.5rem', color: '#003d6b' }}>{item.title}</h3>
-                <p style={{ color: '#666', lineHeight: '1.6' }}>{item.desc}</p>
+                <div style={{ fontSize: '2.8rem', marginBottom: '1rem' }}>{item.icon}</div>
+                <h3 style={{ marginBottom: '0.75rem', color: '#003d6b', fontSize: '1.2rem', fontWeight: '700' }}>{item.title}</h3>
+                <p style={{ color: '#555', lineHeight: '1.7', fontSize: '0.95rem' }}>{item.desc}</p>
               </div>
             ))}
           </div>
