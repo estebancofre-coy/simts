@@ -1293,15 +1293,6 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
               )}
             </div>
           )}
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                </>
-              )}
-            </div>
-          )}
 
           {view === 'collections' && !selectedCollection && (
             <div className="collections-view">
