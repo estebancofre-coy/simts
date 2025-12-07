@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { UserCircle, Settings, FileText, MessageSquare, Send, CheckCircle, GraduationCap, Users, FileEdit, BarChart3, FileCheck, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -237,104 +238,329 @@ export default function Landing() {
               maxWidth: '700px',
               margin: '0 auto'
             }}>
-              Un proceso simple y estructurado para simular casos clínicos interactivos
+              Flujos de trabajo diferenciados para estudiantes y académicos
             </p>
           </div>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-            gap: '2rem',
-            marginBottom: '3rem'
-          }}>
-            {[
-              {
-                step: '1',
-                title: 'Selección del Caso',
-                description: 'El estudiante accede y selecciona un caso clínico de la biblioteca disponible',
-                color: '#003d6b'
-              },
-              {
-                step: '2',
-                title: 'Interacción Guiada',
-                description: 'Realiza preguntas al paciente virtual y analiza los síntomas presentados',
-                color: '#005a9e'
-              },
-              {
-                step: '3',
-                title: 'Toma de Decisiones',
-                description: 'Solicita exámenes, interpreta resultados y desarrolla un diagnóstico',
-                color: '#0077cc'
-              },
-              {
-                step: '4',
-                title: 'Retroalimentación IA',
-                description: 'Recibe feedback inteligente sobre tu razonamiento clínico y decisiones',
-                color: '#00a0e3'
-              }
-            ].map((item, index) => (
-              <div key={index} style={{
-                backgroundColor: '#f8fafb',
-                padding: '2rem',
-                borderRadius: '12px',
-                position: 'relative',
-                transition: 'transform 0.3s ease',
-                cursor: 'default'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <div style={{
-                  width: '50px',
-                  height: '50px',
-                  borderRadius: '50%',
-                  backgroundColor: item.color,
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                  fontWeight: '700',
-                  marginBottom: '1.5rem'
-                }}>
-                  {item.step}
-                </div>
-                <h3 style={{
-                  fontSize: '1.3rem',
-                  marginBottom: '0.75rem',
-                  color: '#1a1a1a',
-                  fontWeight: '600'
-                }}>
-                  {item.title}
-                </h3>
-                <p style={{
-                  fontSize: '1rem',
-                  color: '#4a5568',
-                  lineHeight: '1.6',
-                  margin: 0
-                }}>
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Visual Flow Indicator */}
-          <div style={{
-            textAlign: 'center',
-            padding: '2rem',
-            backgroundColor: '#f8fafb',
-            borderRadius: '12px',
-            border: '2px solid #003d6b'
-          }}>
-            <p style={{
-              fontSize: '1.1rem',
-              color: '#003d6b',
-              fontWeight: '600',
-              margin: 0
+          {/* Workflow para Estudiantes */}
+          <div style={{ marginBottom: '5rem' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              marginBottom: '2.5rem',
+              justifyContent: 'center'
             }}>
-              💡 Resultado: Mejora continua del razonamiento clínico y toma de decisiones basada en evidencia
-            </p>
+              <UserCircle size={32} color="#003d6b" />
+              <h3 style={{
+                fontSize: '2rem',
+                color: '#003d6b',
+                fontWeight: '700',
+                margin: 0
+              }}>
+                Para Estudiantes
+              </h3>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1.5rem',
+              position: 'relative'
+            }}>
+              {[
+                {
+                  step: '1',
+                  icon: <Settings size={28} />,
+                  title: 'Configura tu Caso',
+                  description: 'Selecciona tema, dificultad, grupo etario, contexto territorial y competencia objetivo',
+                  color: '#003d6b'
+                },
+                {
+                  step: '2',
+                  icon: <FileText size={28} />,
+                  title: 'Recibe el Caso',
+                  description: 'La IA genera un caso contextualizado de Trabajo Social con descripción y situación detallada',
+                  color: '#005a9e'
+                },
+                {
+                  step: '3',
+                  icon: <MessageSquare size={28} />,
+                  title: 'Responde Preguntas',
+                  description: 'Contesta preguntas de opción múltiple (calificadas automáticamente) y preguntas abiertas',
+                  color: '#0077cc'
+                },
+                {
+                  step: '4',
+                  icon: <Send size={28} />,
+                  title: 'Envía tus Respuestas',
+                  description: 'Envía tus respuestas al sistema para evaluación y retroalimentación del docente',
+                  color: '#00a0e3'
+                }
+              ].map((item, index, arr) => (
+                <div key={index} style={{ position: 'relative' }}>
+                  <div style={{
+                    backgroundColor: '#f8fafb',
+                    padding: '2rem 1.5rem',
+                    borderRadius: '12px',
+                    borderTop: `4px solid ${item.color}`,
+                    transition: 'all 0.3s ease',
+                    cursor: 'default',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 61, 107, 0.12)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                  >
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      backgroundColor: item.color,
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      marginBottom: '1rem'
+                    }}>
+                      {item.step}
+                    </div>
+                    <div style={{
+                      color: item.color,
+                      marginBottom: '1rem'
+                    }}>
+                      {item.icon}
+                    </div>
+                    <h4 style={{
+                      fontSize: '1.2rem',
+                      marginBottom: '0.75rem',
+                      color: '#1a1a1a',
+                      fontWeight: '600'
+                    }}>
+                      {item.title}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.95rem',
+                      color: '#4a5568',
+                      lineHeight: '1.6',
+                      margin: 0,
+                      flexGrow: 1
+                    }}>
+                      {item.description}
+                    </p>
+                  </div>
+                  
+                  {/* Flecha de flujo */}
+                  {index < arr.length - 1 && (
+                    <div style={{
+                      position: 'absolute',
+                      right: '-1rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 1,
+                      display: window.innerWidth > 768 ? 'block' : 'none'
+                    }}>
+                      <ArrowRight size={24} color="#cbd5e0" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Resultado para Estudiantes */}
+            <div style={{
+              marginTop: '2rem',
+              textAlign: 'center',
+              padding: '1.5rem',
+              backgroundColor: '#e6f2ff',
+              borderRadius: '12px',
+              border: '2px solid #003d6b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem'
+            }}>
+              <CheckCircle size={28} color="#003d6b" />
+              <p style={{
+                fontSize: '1.1rem',
+                color: '#003d6b',
+                fontWeight: '600',
+                margin: 0
+              }}>
+                Resultado: Práctica del razonamiento profesional con feedback académico
+              </p>
+            </div>
+          </div>
+
+          {/* Workflow para Docentes */}
+          <div style={{
+            padding: '3rem 0 0 0',
+            borderTop: '2px solid #e5e7eb'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem',
+              marginBottom: '2.5rem',
+              justifyContent: 'center'
+            }}>
+              <GraduationCap size={32} color="#005a9e" />
+              <h3 style={{
+                fontSize: '2rem',
+                color: '#005a9e',
+                fontWeight: '700',
+                margin: 0
+              }}>
+                Para Académicos
+              </h3>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '1.5rem',
+              position: 'relative'
+            }}>
+              {[
+                {
+                  step: '1',
+                  icon: <Users size={28} />,
+                  title: 'Monitorea Estudiantes',
+                  description: 'Accede al panel docente para ver todas las sesiones de respuestas de tus estudiantes',
+                  color: '#005a9e'
+                },
+                {
+                  step: '2',
+                  icon: <FileEdit size={28} />,
+                  title: 'Revisa Respuestas',
+                  description: 'Filtra por estudiante o caso, revisa respuestas abiertas y múltiple opción con puntajes',
+                  color: '#0077cc'
+                },
+                {
+                  step: '3',
+                  icon: <MessageCircle size={28} />,
+                  title: 'Proporciona Feedback',
+                  description: 'Agrega retroalimentación personalizada y califica respuestas abiertas de forma cualitativa',
+                  color: '#00a0e3'
+                },
+                {
+                  step: '4',
+                  icon: <BarChart3 size={28} />,
+                  title: 'Genera Reportes',
+                  description: 'Exporta datos en CSV/PDF, visualiza estadísticas de desempeño y analiza resultados grupales',
+                  color: '#33b5e5'
+                }
+              ].map((item, index, arr) => (
+                <div key={index} style={{ position: 'relative' }}>
+                  <div style={{
+                    backgroundColor: '#f0f9ff',
+                    padding: '2rem 1.5rem',
+                    borderRadius: '12px',
+                    borderTop: `4px solid ${item.color}`,
+                    transition: 'all 0.3s ease',
+                    cursor: 'default',
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-5px)'
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 90, 158, 0.12)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                  >
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      backgroundColor: item.color,
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      marginBottom: '1rem'
+                    }}>
+                      {item.step}
+                    </div>
+                    <div style={{
+                      color: item.color,
+                      marginBottom: '1rem'
+                    }}>
+                      {item.icon}
+                    </div>
+                    <h4 style={{
+                      fontSize: '1.2rem',
+                      marginBottom: '0.75rem',
+                      color: '#1a1a1a',
+                      fontWeight: '600'
+                    }}>
+                      {item.title}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.95rem',
+                      color: '#4a5568',
+                      lineHeight: '1.6',
+                      margin: 0,
+                      flexGrow: 1
+                    }}>
+                      {item.description}
+                    </p>
+                  </div>
+
+                  {/* Flecha de flujo */}
+                  {index < arr.length - 1 && (
+                    <div style={{
+                      position: 'absolute',
+                      right: '-1rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 1,
+                      display: window.innerWidth > 768 ? 'block' : 'none'
+                    }}>
+                      <ArrowRight size={24} color="#cbd5e0" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Resultado para Docentes */}
+            <div style={{
+              marginTop: '2rem',
+              textAlign: 'center',
+              padding: '1.5rem',
+              backgroundColor: '#e6f7ff',
+              borderRadius: '12px',
+              border: '2px solid #005a9e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '1rem'
+            }}>
+              <FileCheck size={28} color="#005a9e" />
+              <p style={{
+                fontSize: '1.1rem',
+                color: '#005a9e',
+                fontWeight: '600',
+                margin: 0
+              }}>
+                Resultado: Seguimiento personalizado del proceso de aprendizaje de cada estudiante
+              </p>
+            </div>
           </div>
         </div>
       </section>
