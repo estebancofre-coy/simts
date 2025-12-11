@@ -606,8 +606,25 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
             <p className="panel-subtitle">Gestión y administración de casos</p>
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button className="btn-logout" onClick={onLogout} title="Cerrar sesión">
-              🚪 Salir
+            <button 
+              className="btn-logout" 
+              onClick={onLogout} 
+              title="Cerrar sesión"
+              style={{ 
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              🚪 Cerrar Sesión
             </button>
           </div>
         </div>
