@@ -7,14 +7,19 @@ import StudentLoginModal from './StudentLoginModal'
 const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
 
 // Componente para preguntas interactivas
-function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
+function QuestionsList({ questions, openAnswers, onOpenAnswerChange, onAnswersChange }) {
   const [selectedAnswers, setSelectedAnswers] = useState({})
 
   const handleSelect = (questionIndex, optionIndex) => {
-    setSelectedAnswers(prev => ({
-      ...prev,
+    const newAnswers = {
+      ...selectedAnswers,
       [questionIndex]: optionIndex
-    }))
+    }
+    setSelectedAnswers(newAnswers)
+    // Notificar al padre sobre los cambios
+    if (onAnswersChange) {
+      onAnswersChange(newAnswers)
+    }
   }
 
   return (
@@ -264,6 +269,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   )
   const [currentSessionId, setCurrentSessionId] = useState(null)
   const [submittedAnswers, setSubmittedAnswers] = useState(false)
+  const [selectedAnswers, setSelectedAnswers] = useState({}) // Para almacenar respuestas seleccionadas
   const [activeTab, setActiveTab] = useState('generate') // 'generate' or 'feedback'
   const [myFeedback, setMyFeedback] = useState([])
   const [loadingFeedback, setLoadingFeedback] = useState(false)
@@ -470,9 +476,8 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
           selected_option: null
         }
       } else {
-        // Pregunta de opción múltiple
-        const checkedInput = document.querySelector(`input[name="q${idx}"]:checked`)
-        const selectedIndex = checkedInput ? parseInt(checkedInput.value) : null
+        // Pregunta de opción múltiple - usar selectedAnswers que viene del componente
+        const selectedIndex = selectedAnswers[idx] !== undefined ? selectedAnswers[idx] : null
         
         return {
           question_index: idx,
@@ -817,6 +822,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
                   questions={caseObj.questions}
                   openAnswers={openAnswers}
                   onOpenAnswerChange={handleOpenAnswerChange}
+                  onAnswersChange={setSelectedAnswers}
                 />
               </div>
               
