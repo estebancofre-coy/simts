@@ -512,6 +512,11 @@ class SubmitAnswersRequest(BaseModel):
     duration_seconds: Optional[int] = None
 
 
+class FeedbackRequest(BaseModel):
+    feedback: str
+    score: Optional[float] = None
+
+
 @app.post("/api/auth/login")
 async def student_login(req: LoginRequest):
     """Login para estudiantes."""
@@ -637,10 +642,10 @@ async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] =
 
 
 @app.put("/api/answers/{answer_id}/feedback")
-async def update_feedback(answer_id: int, feedback: str, score: Optional[float] = None):
+async def update_feedback(answer_id: int, req: FeedbackRequest):
     """Docente agrega feedback y score a una respuesta."""
     try:
-        updated = _db.update_answer_feedback(DB_PATH, answer_id, feedback, score)
+        updated = _db.update_answer_feedback(DB_PATH, answer_id, req.feedback, req.score)
         if not updated:
             raise HTTPException(status_code=404, detail="Respuesta no encontrada")
         return {"ok": True, "message": "Feedback actualizado"}
