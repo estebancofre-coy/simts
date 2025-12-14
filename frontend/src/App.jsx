@@ -895,7 +895,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
             
             <div className="case-description">
               <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8' }}>
-                {caseObj.description || caseObj.text}
+                {(caseObj.description || caseObj.text)?.replace(/\\n/g, '\n')}
               </div>
             </div>
 
