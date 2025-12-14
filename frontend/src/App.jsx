@@ -251,6 +251,9 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   const [caseDbId, setCaseDbId] = useState(null) // ID del caso en la base de datos
   const [responseText, setResponseText] = useState('')
   const [loading, setLoading] = useState(false)
+  const [existingCases, setExistingCases] = useState([]) // Casos existentes
+  const [selectedExistingCase, setSelectedExistingCase] = useState(null) // Caso seleccionado
+  const [showExistingCases, setShowExistingCases] = useState(false) // Toggle para mostrar selector
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [openAnswers, setOpenAnswers] = useState({})
@@ -288,6 +291,34 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
       console.error('Error cargando feedback:', e)
     } finally {
       setLoadingFeedback(false)
+    }
+  }
+
+  async function loadExistingCases() {
+    try {
+      const res = await fetch(`${API_BASE}/api/cases?limit=100&status=active`)
+      const data = await res.json()
+      if (data.ok && data.cases) {
+        setExistingCases(data.cases)
+      }
+    } catch (e) {
+      console.error('Error cargando casos:', e)
+    }
+  }
+
+  async function selectExistingCase(caseId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/cases/${caseId}`)
+      const data = await res.json()
+      if (data.ok && data.case) {
+        setCaseObj(data.case)
+        setCaseDbId(caseId)
+        setResponseText('')
+        setShowExistingCases(false)
+      }
+    } catch (e) {
+      console.error('Error cargando caso:', e)
+      alert('Error al cargar el caso')
     }
   }
 
@@ -773,9 +804,73 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
           </select>
         </div>
 
-        <button className="btn-primary" onClick={generateCase} disabled={loading}>
-          {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button className="btn-primary" onClick={generateCase} disabled={loading}>
+            {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
+          </button>
+          <button 
+            className="btn-secondary" 
+            onClick={() => {
+              setShowExistingCases(!showExistingCases)
+              if (!showExistingCases && existingCases.length === 0) {
+                loadExistingCases()
+              }
+            }}
+          >
+            📚 Seleccionar Caso Existente
+          </button>
+        </div>
+
+        {showExistingCases && (
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '2px solid #17a2b8'
+          }}>
+            <h4 style={{ marginTop: 0, color: '#003d6b' }}>📚 Casos Disponibles</h4>
+            {existingCases.length === 0 ? (
+              <p style={{ color: '#666' }}>No hay casos disponibles</p>
+            ) : (
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '0.75rem'
+              }}>
+                {existingCases.slice(0, 20).map(c => (
+                  <div 
+                    key={c.id}
+                    onClick={() => selectExistingCase(c.id)}
+                    style={{
+                      padding: '1rem',
+                      backgroundColor: 'white',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = 'none'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
+                  >
+                    <strong style={{ color: '#003d6b', display: 'block', marginBottom: '0.5rem' }}>
+                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
+                    </strong>
+                    <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                      {c.theme} • {c.difficulty}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="results-section">
