@@ -719,6 +719,74 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
       <div className="config-panel">
         <h2 className="section-title">Configuración del Caso</h2>
         
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <button className="btn-primary" onClick={generateCase} disabled={loading}>
+            {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
+          </button>
+          <button 
+            className="btn-secondary" 
+            onClick={() => {
+              setShowExistingCases(!showExistingCases)
+              if (!showExistingCases && existingCases.length === 0) {
+                loadExistingCases()
+              }
+            }}
+          >
+            📚 Seleccionar Caso Existente
+          </button>
+        </div>
+
+        {showExistingCases && (
+          <div style={{
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '2px solid #17a2b8'
+          }}>
+            <h4 style={{ marginTop: 0, color: '#003d6b' }}>📚 Casos Disponibles</h4>
+            {existingCases.length === 0 ? (
+              <p style={{ color: '#666' }}>No hay casos disponibles</p>
+            ) : (
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                gap: '0.75rem'
+              }}>
+                {existingCases.slice(0, 20).map(c => (
+                  <div 
+                    key={c.id}
+                    onClick={() => selectExistingCase(c.id)}
+                    style={{
+                      padding: '1rem',
+                      backgroundColor: 'white',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
+                      e.currentTarget.style.transform = 'translateY(-2px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = 'none'
+                      e.currentTarget.style.transform = 'translateY(0)'
+                    }}
+                  >
+                    <strong style={{ color: '#003d6b', display: 'block', marginBottom: '0.5rem' }}>
+                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
+                    </strong>
+                    <span style={{ fontSize: '0.85rem', color: '#666' }}>
+                      {c.theme} • {c.difficulty}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
         <div className="form-group">\n
           <label className="form-label">Temática</label>
           <select className="form-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
@@ -803,75 +871,6 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
             ))}
           </select>
         </div>
-
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button className="btn-primary" onClick={generateCase} disabled={loading}>
-            {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
-          </button>
-          <button 
-            className="btn-secondary" 
-            onClick={() => {
-              setShowExistingCases(!showExistingCases)
-              if (!showExistingCases && existingCases.length === 0) {
-                loadExistingCases()
-              }
-            }}
-          >
-            📚 Seleccionar Caso Existente
-          </button>
-        </div>
-
-        {showExistingCases && (
-          <div style={{
-            marginTop: '1.5rem',
-            padding: '1rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '2px solid #17a2b8'
-          }}>
-            <h4 style={{ marginTop: 0, color: '#003d6b' }}>📚 Casos Disponibles</h4>
-            {existingCases.length === 0 ? (
-              <p style={{ color: '#666' }}>No hay casos disponibles</p>
-            ) : (
-              <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: '0.75rem'
-              }}>
-                {existingCases.slice(0, 20).map(c => (
-                  <div 
-                    key={c.id}
-                    onClick={() => selectExistingCase(c.id)}
-                    style={{
-                      padding: '1rem',
-                      backgroundColor: 'white',
-                      border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = 'none'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    <strong style={{ color: '#003d6b', display: 'block', marginBottom: '0.5rem' }}>
-                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
-                    </strong>
-                    <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                      {c.theme} • {c.difficulty}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       <div className="results-section">
         <h2 className="section-title">Caso Generado</h2>
