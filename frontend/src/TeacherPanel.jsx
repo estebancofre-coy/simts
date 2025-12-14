@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 
-const API_BASE = import.meta.env.VITE_API_URL || ''
+const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
 
 export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, activeCase = null }) {
   const [cases, setCases] = useState([])
