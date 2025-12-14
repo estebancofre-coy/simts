@@ -135,7 +135,7 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
       if (data.ok) {
         // Reload current session
         if (selectedSession) {
-          loadSessionAnswers(selectedSession.id)
+          loadSessionAnswers(selectedSession.session_id)
         }
         alert('✅ Feedback guardado')
       }
@@ -255,7 +255,7 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
       yPos += 8
     })
     
-    doc.save(`respuestas_${session.student_name || session.student_id}_${session.id}.pdf`)
+    doc.save(`respuestas_${session.student_name || session.student_id}_${session.session_id}.pdf`)
   }
 
   async function createCollection() {
@@ -1244,7 +1244,7 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                     }}>
                       {sessions.map(session => (
                         <div
-                          key={session.id}
+                          key={session.session_id}
                           style={{
                             border: '1px solid #e0e0e0',
                             borderRadius: '10px',
@@ -1262,7 +1262,7 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
                             e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'
                             e.currentTarget.style.transform = 'translateY(0)'
                           }}
-                          onClick={() => loadSessionAnswers(session.id)}
+                          onClick={() => loadSessionAnswers(session.session_id)}
                         >
                           <div style={{ marginBottom: '1rem' }}>
                             <h4 style={{ 
