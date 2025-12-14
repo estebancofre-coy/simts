@@ -102,14 +102,24 @@ export default function TeacherPanel({ onClose, onLogout, openAnswers = {}, acti
 
   async function loadSessionAnswers(sessionId) {
     try {
+      console.log('Cargando respuestas para sesión:', sessionId)
       const res = await fetch(`${API_BASE}/api/answers?session_id=${sessionId}`)
       const data = await res.json()
-      if (data.ok && data.sessions.length > 0) {
-        setSessionAnswers(data.sessions[0].answers || [])
-        setSelectedSession(data.sessions[0])
+      console.log('Respuesta del API:', data)
+      
+      if (data.ok && data.sessions && data.sessions.length > 0) {
+        const session = data.sessions[0]
+        console.log('Sesión seleccionada:', session)
+        setSessionAnswers(session.answers || [])
+        setSelectedSession(session)
+      } else {
+        console.error('No se encontraron respuestas')
+        setSessionAnswers([])
+        setSelectedSession(null)
       }
     } catch (e) {
       console.error('Error cargando respuestas:', e)
+      alert('Error cargando respuestas: ' + e.message)
     }
   }
 

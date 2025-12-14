@@ -575,12 +575,12 @@ async def submit_answers(req: SubmitAnswersRequest):
 async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, session_id: Optional[int] = None, limit: int = 100):
     """Obtiene respuestas (para docentes o estudiante propio)."""
     try:
+        # Obtener todas las sesiones con filtros básicos
+        sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
+        
+        # Si se solicita una sesión específica, filtrar
         if session_id:
-            # Si se solicita una sesión específica, cargar solo esa
-            sessions = _db.get_student_sessions(DB_PATH, limit=1)
             sessions = [s for s in sessions if s.get("session_id") == session_id]
-        else:
-            sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
         
         for sess in sessions:
             # Obtener respuestas de la sesión
