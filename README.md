@@ -197,6 +197,30 @@ Se planea implementar:
 
 ## 🔐 Seguridad en Producción
 
+### ⚠️ IMPORTANTE: Actualización de Seguridad (Enero 2026)
+
+**Vulnerabilidades críticas corregidas en dependencias:**
+
+Se han identificado y corregido vulnerabilidades críticas en las siguientes dependencias:
+
+1. **Gunicorn 21.2.0 → 22.0.0** 
+   - HTTP Request/Response Smuggling
+   - Request smuggling bypass de restricciones
+   
+2. **python-multipart 0.0.6 → 0.0.18**
+   - DoS via malformed multipart/form-data
+   - Content-Type Header ReDoS
+
+**Acción requerida:** Actualizar inmediatamente:
+```bash
+cd backend
+pip install -r requirements-prod.txt --upgrade
+```
+
+Ver [SECURITY.md](./SECURITY.md) para detalles completos.
+
+---
+
 SimTS implementa múltiples capas de seguridad para uso en producción:
 
 ### Variables de Entorno Requeridas

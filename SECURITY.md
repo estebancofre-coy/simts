@@ -7,6 +7,30 @@
 | 1.1.x   | :white_check_mark: |
 | < 1.0   | :x:                |
 
+## Recent Security Updates
+
+### January 2026 - Dependency Vulnerabilities Fixed
+
+**Critical vulnerabilities patched:**
+
+1. **Gunicorn 21.2.0 → 22.0.0**
+   - CVE: HTTP Request/Response Smuggling vulnerability
+   - CVE: Request smuggling leading to endpoint restriction bypass
+   - Impact: HIGH - Could allow attackers to bypass security controls
+   - Resolution: Updated to gunicorn 22.0.0
+
+2. **python-multipart 0.0.6 → 0.0.18**
+   - CVE: Denial of service (DoS) via malformed multipart/form-data boundary
+   - CVE: Content-Type Header ReDoS vulnerability
+   - Impact: HIGH - Could cause service disruption
+   - Resolution: Updated to python-multipart 0.0.18
+
+**Action Required:** Update dependencies immediately:
+```bash
+cd backend
+pip install -r requirements-prod.txt --upgrade
+```
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in SimTS, please report it responsibly:
