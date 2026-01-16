@@ -4,7 +4,7 @@ import json
 import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator, EmailStr
 from dotenv import load_dotenv
@@ -593,8 +593,9 @@ async def student_login(request: Request, req: LoginRequest):
 
 
 @app.post("/api/auth/register")
-async def student_register(req: StudentCreate):
-    """Registro de nuevos estudiantes."""
+@limiter.limit("3/minute")
+async def student_register(request: Request, req: StudentCreate):
+    """Registro de nuevos estudiantes con rate limiting (máximo 3 registros por minuto)."""
     try:
         student = _db.create_student(DB_PATH, req.username, req.password, req.name, req.email)
         return {"ok": True, "student": student, "message": "Estudiante registrado exitosamente"}
@@ -606,10 +607,10 @@ async def student_register(req: StudentCreate):
 
 
 @app.post("/api/answers")
-async def submit_answers(req: SubmitAnswersRequest):
-    """Estudiante envía sus respuestas para un caso. Requiere autenticación."""
+async def submit_answers(req: SubmitAnswersRequest, current_user: dict = Depends(auth.get_current_student)):
+    """Estudiante envía sus respuestas para un caso. Requiere autenticación JWT."""
     try:
-        student_id = 1  # TODO: extraer de token
+        student_id = current_user["user_id"]  # Extract from JWT token
         session_id = _db.create_session(DB_PATH, student_id, req.case_id)
         
         case = _db.get_case(DB_PATH, req.case_id)
@@ -650,9 +651,25 @@ async def submit_answers(req: SubmitAnswersRequest):
 
 
 @app.get("/api/answers")
-async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, session_id: Optional[int] = None, limit: int = 100):
-    """Obtiene respuestas (para docentes o estudiante propio)."""
+async def get_answers(
+    student_id: Optional[int] = None, 
+    case_id: Optional[int] = None, 
+    session_id: Optional[int] = None, 
+    limit: int = 100,
+    current_user: dict = Depends(auth.get_current_student)
+):
+    """Obtiene respuestas del estudiante autenticado. Requiere JWT authentication."""
     try:
+        # Solo permitir que el estudiante vea sus propias respuestas
+        authenticated_student_id = current_user["user_id"]
+        
+        # Si se especifica un student_id diferente, verificar que sea el mismo usuario
+        if student_id is not None and student_id != authenticated_student_id:
+            raise HTTPException(status_code=403, detail="No autorizado para ver respuestas de otros estudiantes")
+        
+        # Usar el student_id del token
+        student_id = authenticated_student_id
+        
         # Obtener todas las sesiones con filtros básicos
         sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
         
@@ -716,7 +733,12 @@ async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] =
 
 @app.put("/api/answers/{answer_id}/feedback")
 async def update_feedback(answer_id: int, req: FeedbackRequest):
-    """Docente agrega feedback y score a una respuesta."""
+    """Docente agrega feedback y score a una respuesta.
+    
+    TODO: Implementar autenticación de docentes.
+    Por ahora este endpoint está sin autenticación para facilitar desarrollo.
+    En producción debe requerir JWT de tipo 'teacher'.
+    """
     try:
         updated = _db.update_answer_feedback(DB_PATH, answer_id, req.feedback, req.score)
         if not updated:
@@ -731,7 +753,12 @@ async def update_feedback(answer_id: int, req: FeedbackRequest):
 
 @app.get("/api/students")
 async def list_students():
-    """Lista estudiantes (para panel docente)."""
+    """Lista todos los estudiantes.
+    
+    TODO: Implementar autenticación de docentes.
+    Por ahora este endpoint está sin autenticación para facilitar desarrollo.
+    En producción debe requerir JWT de tipo 'teacher'.
+    """
     try:
         students = _db.list_students(DB_PATH)
         return {"ok": True, "students": students}

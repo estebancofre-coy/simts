@@ -30,8 +30,10 @@ export default function StudentLoginModal({ onLogin, onCancel }) {
       // Guardar datos del estudiante en sessionStorage (más seguro que localStorage)
       sessionStorage.setItem('studentAuth', 'true')
       sessionStorage.setItem('studentData', JSON.stringify(data.student))
+      // TODO: Para producción, implementar HttpOnly cookies en el backend
       // El token debe venir en cookie HttpOnly desde el backend para mayor seguridad
-      // Por ahora lo guardamos en sessionStorage, pero idealmente debería ser una cookie HttpOnly
+      // y evitar vulnerabilidades XSS. Por ahora lo guardamos en sessionStorage como mejora temporal.
+      sessionStorage.setItem('studentToken', data.token)
 
       onLogin(data.student)
     } catch (err) {
