@@ -10,3 +10,4 @@ passlib[bcrypt]==1.7.4
 slowapi==0.1.9
 prometheus-fastapi-instrumentator==6.1.0
 pytest-cov==4.1.0
+email-validator>=2.0.0
