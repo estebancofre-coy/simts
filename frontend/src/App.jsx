@@ -1168,7 +1168,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
       )}
       </div>
 
-      <aside className="sidebar">\n
+      <aside className="sidebar">
         <div className="sidebar-header">
           <h2 className="sidebar-title">📚 Historial</h2>
           <button className="btn-secondary" onClick={fetchHistory} disabled={loadingHistory}>
