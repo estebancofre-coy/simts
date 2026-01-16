@@ -465,6 +465,10 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
     setIsAuthenticated(false)
     localStorage.removeItem('teacherAuth')
     setShowTeacherPanel(false)
+    // Llamar al onLogout del padre para limpiar todo el estado y redirigir
+    if (onLogout) {
+      onLogout()
+    }
   }
 
   function handleStudentLogin(student) {
