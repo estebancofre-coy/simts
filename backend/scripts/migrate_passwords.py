@@ -2,9 +2,10 @@
 """
 Script to migrate existing SHA256 password hashes to bcrypt.
 
-This script updates all student passwords that are currently stored as SHA256 hashes
-to use bcrypt for better security. It maintains backward compatibility by checking
-the hash format before attempting migration.
+IMPORTANT: SHA256 hashes cannot be automatically migrated because hashes are one-way.
+However, this system automatically migrates passwords to bcrypt when users successfully log in.
+
+This script provides information about migration status and tools to help.
 
 Usage:
     python migrate_passwords.py [db_path]
@@ -23,8 +24,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from security import hash_password, is_bcrypt_hash
 
 
-def migrate_passwords(db_path: str):
-    """Migrate SHA256 password hashes to bcrypt.
+def check_migration_status(db_path: str):
+    """Check migration status of all students.
     
     Args:
         db_path: Path to the SQLite database file
@@ -40,45 +41,78 @@ def migrate_passwords(db_path: str):
     cur.execute("SELECT id, username, password_hash FROM students")
     students = cur.fetchall()
     
-    migrated_count = 0
-    skipped_count = 0
+    bcrypt_count = 0
+    sha256_count = 0
+    unknown_count = 0
     
     print(f"Found {len(students)} students in database")
-    print("Starting password migration...\n")
+    print("\nMigration Status:")
+    print("-" * 60)
     
     for student_id, username, current_hash in students:
         # Check if already using bcrypt
         if is_bcrypt_hash(current_hash):
-            print(f"✓ Skipping {username}: Already using bcrypt")
-            skipped_count += 1
-            continue
+            status = "✓ bcrypt (secure)"
+            bcrypt_count += 1
+        elif len(current_hash) == 64:
+            status = "⚠ SHA256 (will auto-migrate on next login)"
+            sha256_count += 1
+        else:
+            status = "? Unknown format"
+            unknown_count += 1
         
-        # SHA256 hashes are 64 characters long (hex encoded)
-        if len(current_hash) != 64:
-            print(f"⚠ Skipping {username}: Unknown hash format (length: {len(current_hash)})")
-            skipped_count += 1
-            continue
-        
-        # For security reasons, we cannot reverse SHA256 hashes
-        # We need to set a temporary password or prompt for reset
-        print(f"⚠ Cannot migrate {username}: SHA256 hash cannot be reversed")
-        print(f"  User will need to reset their password or contact an administrator")
-        skipped_count += 1
+        print(f"  {username:20s} {status}")
     
     conn.close()
     
-    print(f"\nMigration Summary:")
-    print(f"  Migrated: {migrated_count}")
-    print(f"  Skipped: {skipped_count}")
-    print(f"  Total: {len(students)}")
+    print("\n" + "=" * 60)
+    print(f"Summary:")
+    print(f"  ✓ Secure (bcrypt):     {bcrypt_count}")
+    print(f"  ⚠ Legacy (SHA256):     {sha256_count}")
+    print(f"  ? Unknown:             {unknown_count}")
+    print(f"  Total:                 {len(students)}")
+    print("=" * 60)
     
-    if migrated_count == 0 and skipped_count > 0:
-        print("\n⚠ Note: SHA256 hashes cannot be automatically migrated to bcrypt.")
-        print("  Options:")
-        print("  1. Users can reset their passwords through the application")
-        print("  2. Administrators can create new accounts for users")
-        print("  3. Use the create_demo_user.py script to create test accounts")
+    if sha256_count > 0:
+        print("\n📝 Migration Strategy:")
+        print("  1. AUTOMATIC: Users with SHA256 passwords will be automatically")
+        print("     migrated to bcrypt when they next successfully log in.")
+        print("  2. MANUAL: Use create_demo_user() below to create new users")
+        print("     with bcrypt passwords immediately.")
+        print("  3. RESET: For users who cannot log in, reset their password")
+        print("     using set_user_password() function.")
     
+    return True
+
+
+def set_user_password(db_path: str, username: str, new_password: str):
+    """Set a new bcrypt password for a user (password reset).
+    
+    Args:
+        db_path: Path to the SQLite database file
+        username: Username of the user
+        new_password: New plain text password (will be hashed)
+    """
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    
+    # Check if user exists
+    cur.execute("SELECT id FROM students WHERE username = ?", (username,))
+    if not cur.fetchone():
+        print(f"✗ User {username} not found")
+        conn.close()
+        return False
+    
+    # Set new bcrypt password
+    pw_hash = hash_password(new_password)
+    cur.execute(
+        "UPDATE students SET password_hash = ? WHERE username = ?",
+        (pw_hash, username)
+    )
+    conn.commit()
+    conn.close()
+    
+    print(f"✓ Password reset for user {username} with bcrypt hash")
     return True
 
 
@@ -127,14 +161,25 @@ if __name__ == "__main__":
     
     print(f"Database path: {db_path}\n")
     
-    # Run migration
-    migrate_passwords(db_path)
+    # Check migration status
+    check_migration_status(db_path)
     
-    # Offer to create demo user with bcrypt
-    print("\n" + "="*60)
-    print("Would you like to create a demo user with bcrypt password?")
-    print("This is useful for testing the new authentication system.")
-    response = input("Create demo user? (y/n): ").strip().lower()
+    print("\n" + "=" * 60)
+    print("Options:")
+    print("  1. Create a new user with bcrypt password")
+    print("  2. Reset password for existing user")
+    print("  3. Exit")
     
-    if response == 'y':
-        create_demo_user(db_path, "demo", "demo1234", "Demo User")
+    choice = input("\nSelect option (1-3): ").strip()
+    
+    if choice == "1":
+        username = input("Username: ").strip()
+        password = input("Password: ").strip()
+        name = input("Full name: ").strip()
+        create_demo_user(db_path, username, password, name)
+    elif choice == "2":
+        username = input("Username: ").strip()
+        password = input("New password: ").strip()
+        set_user_password(db_path, username, password)
+    else:
+        print("Exiting...")

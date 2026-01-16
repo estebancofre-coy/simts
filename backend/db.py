@@ -554,9 +554,16 @@ def delete_collection(db_path: str, collection_id: int) -> bool:
 # --- Student authentication and answers ---
 
 def authenticate_student(db_path: str, username: str, password: str) -> Optional[Dict]:
-    """Autentica estudiante y devuelve su info si el password es correcto."""
-    from security import verify_password, is_bcrypt_hash
+    """Autentica estudiante y devuelve su info si el password es correcto.
+    
+    Soporta tanto bcrypt (recomendado) como SHA256 (legacy) para backward compatibility.
+    Si se usa SHA256, automáticamente migra el password a bcrypt después de verificar.
+    """
+    from security import verify_password, is_bcrypt_hash, hash_password
     import hashlib
+    import logging
+    
+    logger = logging.getLogger("simts.db")
     
     conn = _connect(db_path)
     cur = conn.cursor()
@@ -565,23 +572,38 @@ def authenticate_student(db_path: str, username: str, password: str) -> Optional
         (username,)
     )
     row = cur.fetchone()
-    conn.close()
     
     if not row:
+        conn.close()
         return None
     
     stored_hash = row[6]
+    student_id = row[0]
     
     # Verify password using bcrypt or fallback to SHA256 for legacy passwords
     if is_bcrypt_hash(stored_hash):
         # Use bcrypt verification
         if not verify_password(password, stored_hash):
+            conn.close()
             return None
     else:
         # Legacy SHA256 verification (for backward compatibility)
+        logger.warning(f"Student {username} using legacy SHA256 password - will migrate to bcrypt")
         pw_hash = hashlib.sha256(password.encode()).hexdigest()
         if pw_hash != stored_hash:
+            conn.close()
             return None
+        
+        # Password is correct - migrate to bcrypt automatically
+        new_hash = hash_password(password)
+        cur.execute(
+            "UPDATE students SET password_hash = ? WHERE id = ?",
+            (new_hash, student_id)
+        )
+        conn.commit()
+        logger.info(f"Migrated password for student {username} from SHA256 to bcrypt")
+    
+    conn.close()
     
     return {
         "id": row[0],

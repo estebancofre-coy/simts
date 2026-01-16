@@ -1,16 +1,26 @@
 """Authentication and JWT token management for SimTS backend."""
 
 import os
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict
 from jose import JWTError, jwt
 from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+logger = logging.getLogger("simts.auth")
+
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "CHANGE_ME_IN_PRODUCTION")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# Warn if using default secret key
+if SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
+    logger.warning(
+        "⚠️  Using default JWT_SECRET_KEY! This is insecure for production. "
+        "Generate a secure key with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+    )
 
 security = HTTPBearer()
 
