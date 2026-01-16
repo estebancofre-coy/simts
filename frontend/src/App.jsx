@@ -552,6 +552,12 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   }
 
   function attemptOpenPanel() {
+    // Si hay un estudiante logueado, mostrar mensaje de advertencia
+    if (isStudentAuthenticated || isStudent) {
+      alert('⚠️ Para iniciar sesión como docente, primero debes cerrar tu sesión como estudiante.\n\nPor favor, cierra sesión y vuelve a intentarlo.')
+      return
+    }
+    
     if (isAuthenticated) {
       setShowTeacherPanel(true)
     } else {
@@ -871,6 +877,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
             ))}
           </select>
         </div>
+      </div>
 
       <div className="results-section">
         <h2 className="section-title">Caso Generado</h2>
@@ -996,7 +1003,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
           </div>
         )}
       </div>
-      </> 
+      </>
       ) : (
         /* Vista de Feedback del Estudiante */
         <div style={{ padding: '2rem' }}>
@@ -1199,7 +1206,11 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
         <button 
           className="btn-teacher-access"
           onClick={attemptOpenPanel}
-          title="Acceso panel de docentes"
+          title={isStudentAuthenticated || isStudent ? "Cierra sesión como estudiante para acceder al panel docente" : "Acceso panel de docentes"}
+          style={{
+            opacity: (isStudentAuthenticated || isStudent) ? 0.6 : 1,
+            cursor: 'pointer'
+          }}
         >
           🎓 Panel Docente
         </button>
