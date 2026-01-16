@@ -38,6 +38,33 @@ curl -I http://localhost:5173
 curl -I http://localhost:8000/docs
 ```
 
+## 🔒 Seguridad
+
+**IMPORTANTE**: Este proyecto implementa medidas de seguridad críticas. Antes de desplegar en producción:
+
+1. **Cambiar JWT Secret Key**: 
+   ```bash
+   python -c "import secrets; print(secrets.token_urlsafe(32))"
+   ```
+   Y configurar en `backend/.env` como `JWT_SECRET_KEY`
+
+2. **Configurar CORS**: Establecer `ALLOWED_ORIGINS` con dominios específicos
+   ```bash
+   ALLOWED_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com
+   ```
+
+3. **Ver [SECURITY.md](./SECURITY.md)** para la política completa de seguridad
+
+Características de seguridad implementadas:
+- ✅ Passwords hasheados con bcrypt
+- ✅ Autenticación JWT con expiración
+- ✅ Rate limiting (5 intentos/min en login)
+- ✅ CORS configurado por entorno
+- ✅ Validación de inputs con Pydantic
+- ✅ Monitoreo con Prometheus
+- ✅ Índices de base de datos
+- ✅ Tests de seguridad automatizados
+
 ## Notas
 - En desarrollo, accede a la UI por `http://localhost:5173` (Vite sirve `index.html`).
 - La API corre en `http://localhost:8000` y el frontend proxyea `/api/*` en dev.
@@ -171,13 +198,75 @@ CREATE TABLE students (
 
 ### Consideraciones de Seguridad
 
-**⚠️ IMPORTANTE:** En producción, las contraseñas deben estar hasheadas. Actualmente el sistema usa contraseñas en texto plano para desarrollo.
+**✅ IMPLEMENTADO:** El sistema ahora incluye las siguientes características de seguridad:
 
-**Para producción, implementar:**
-1. Hash de contraseñas con bcrypt o similar
-2. Sistema de registro con validación de email
-3. Recuperación de contraseñas
-4. Panel administrativo para gestión de usuarios
+1. **Passwords Hasheados con bcrypt**: Todas las contraseñas se almacenan hasheadas con bcrypt
+2. **JWT Authentication**: Sistema de tokens JWT con expiración de 30 minutos
+3. **Rate Limiting**: Protección contra ataques de fuerza bruta (5 intentos/min en login)
+4. **CORS Configurado**: Orígenes permitidos configurables via variable de entorno
+5. **Validación de Inputs**: Validadores Pydantic para username y password
+6. **Monitoreo**: Métricas de Prometheus expuestas en `/metrics`
+7. **Índices de Base de Datos**: Mejor performance y protección contra DoS
+
+Ver [SECURITY.md](./SECURITY.md) para más detalles.
+
+### Variables de Entorno de Seguridad
+
+Crea un archivo `backend/.env` basado en `backend/.env.example`:
+
+```bash
+# Generar JWT secret key
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+
+# Configurar en backend/.env
+JWT_SECRET_KEY=tu_clave_secreta_generada
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+OPENAI_API_KEY=tu_api_key_de_openai
+```
+
+### Registrar Nuevos Estudiantes
+
+**Con bcrypt (Recomendado):**
+
+```python
+import sys
+sys.path.append('backend')
+import db
+
+# Crear estudiante con password hasheado
+student = db.create_student(
+    db_path='backend/cases.db',
+    username='juan.perez',
+    password='password_seguro_123',  # Será hasheado automáticamente
+    name='Juan Pérez',
+    email='juan.perez@universidad.cl'
+)
+print(f"Estudiante creado con ID: {student['id']}")
+```
+
+**O usando el script de migración:**
+
+```bash
+cd backend
+python scripts/migrate_passwords.py cases.db
+```
+
+### Testing de Autenticación
+
+```bash
+# Ejecutar tests
+cd backend
+pytest tests/test_auth.py -v
+pytest tests/test_api.py -v
+
+# Test de login
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "estudiante1", "password": "pass"}'
+
+# Respuesta incluye JWT token
+# {"ok": true, "student": {...}, "token": "eyJ..."}
+```
 
 ### Próximas Mejoras
 
