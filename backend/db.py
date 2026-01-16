@@ -3,6 +3,87 @@ import json
 import os
 from typing import Optional, List, Dict
 from datetime import datetime
+from contextlib import contextmanager
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Password hashing functions
+try:
+    import bcrypt
+    BCRYPT_AVAILABLE = True
+except ImportError:
+    BCRYPT_AVAILABLE = False
+    logger.warning("bcrypt not available, falling back to hashlib (NOT SECURE for production)")
+    import hashlib
+
+
+def hash_password(password: str) -> str:
+    """
+    Hash a password using bcrypt (or fallback to sha256 if bcrypt not available).
+    
+    Args:
+        password: Plain text password
+        
+    Returns:
+        Hashed password as string
+    """
+    if BCRYPT_AVAILABLE:
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        return hashed.decode('utf-8')
+    else:
+        # Fallback (NOT SECURE - only for development)
+        return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    """
+    Verify a password against a hash.
+    
+    Args:
+        password: Plain text password to verify
+        hashed: Hashed password from database
+        
+    Returns:
+        True if password matches, False otherwise
+    """
+    if BCRYPT_AVAILABLE:
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        except Exception as e:
+            logger.error(f"Error verifying password with bcrypt: {e}")
+            return False
+    else:
+        # Fallback comparison for sha256
+        return hashlib.sha256(password.encode()).hexdigest() == hashed
+
+
+@contextmanager
+def get_db_connection(db_path: str):
+    """
+    Context manager for database connections.
+    Ensures connections are properly closed even if errors occur.
+    
+    Usage:
+        with get_db_connection(db_path) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT ...")
+            # conn.commit() is called automatically on success
+    """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        yield conn
+        conn.commit()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Database error: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 
 def init_db(db_path: str):
@@ -119,17 +200,31 @@ def init_db(db_path: str):
         pass
     conn.commit()
     
+    # Create indexes for better query performance
+    try:
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_students_username ON students(username)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_student ON student_sessions(student_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_answers_session ON student_answers(session_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_composite ON student_sessions(student_id, case_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_answers_composite ON student_answers(session_id, question_index)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_theme ON cases(theme)")
+        conn.commit()
+        logger.info("Database indexes created successfully")
+    except sqlite3.OperationalError as e:
+        logger.warning(f"Error creating indexes (may already exist): {e}")
+    
     # Insertar estudiante de prueba si no existe
     cur.execute("SELECT COUNT(*) FROM students WHERE username = ?", ("estudiante1",))
     if cur.fetchone()[0] == 0:
-        # Password hash simple para demo (en producción usar bcrypt)
-        import hashlib
-        pw_hash = hashlib.sha256("pass".encode()).hexdigest()
+        # Use bcrypt for password hashing
+        pw_hash = hash_password("pass")
         cur.execute(
             "INSERT INTO students (username, password_hash, name, created_at, status) VALUES (?, ?, ?, ?, ?)",
             ("estudiante1", pw_hash, "Estudiante Demo", datetime.utcnow().isoformat(), "active")
         )
         conn.commit()
+        logger.info("Demo student created with secure password hash")
     
     conn.close()
 
@@ -546,25 +641,29 @@ def delete_collection(db_path: str, collection_id: int) -> bool:
 
 def authenticate_student(db_path: str, username: str, password: str) -> Optional[Dict]:
     """Autentica estudiante y devuelve su info si el password es correcto."""
-    import hashlib
-    pw_hash = hashlib.sha256(password.encode()).hexdigest()
     conn = _connect(db_path)
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, username, name, email, created_at, status FROM students WHERE username = ? AND password_hash = ? AND status = 'active'",
-        (username, pw_hash)
+        "SELECT id, username, password_hash, name, email, created_at, status FROM students WHERE username = ? AND status = 'active'",
+        (username,)
     )
     row = cur.fetchone()
     conn.close()
+    
     if not row:
         return None
+    
+    # Verify password using bcrypt or fallback
+    if not verify_password(password, row[2]):
+        return None
+    
     return {
         "id": row[0],
         "username": row[1],
-        "name": row[2],
-        "email": row[3],
-        "created_at": row[4],
-        "status": row[5]
+        "name": row[3],
+        "email": row[4],
+        "created_at": row[5],
+        "status": row[6]
     }
 
 

@@ -4,17 +4,23 @@ import json
 import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, validator
 from dotenv import load_dotenv
 import db as _db
+from security import rate_limiter, InputValidator, SecurityHeaders, get_client_ip
+from monitoring import HealthChecker, metrics_collector
 
 # Carga variables de entorno desde .env en desarrollo
 load_dotenv()
 
 logger = logging.getLogger("simts.backend")
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 class DummyResponses:
@@ -44,14 +50,45 @@ client = ClientWrapper(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
 
-# Configurar CORS para permitir peticiones desde el frontend
+# Configurar CORS con allowlist específica
+# En producción, especifica los orígenes permitidos
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+if "*" in ALLOWED_ORIGINS:
+    logger.warning("CORS configured to allow all origins (*). This should be restricted in production!")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes (simplifica para desarrollo/producción)
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Permite GET, POST, etc.
-    allow_headers=["*"],  # Permite todos los headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
+
+
+# Middleware para agregar headers de seguridad
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    start_time = time.time()
+    
+    try:
+        response = await call_next(request)
+        success = response.status_code < 400
+    except Exception as e:
+        logger.exception("Request failed")
+        success = False
+        raise
+    finally:
+        duration = time.time() - start_time
+        metrics_collector.record_request(duration, success)
+        logger.info(f"{request.method} {request.url.path} - {response.status_code if 'response' in locals() else 'error'} - {duration:.3f}s")
+    
+    # Add security headers
+    for header, value in SecurityHeaders.get_headers().items():
+        response.headers[header] = value
+    
+    return response
 
 # Inicializar DB de persistencia
 DB_PATH = os.getenv("SIMTS_DB_PATH") or os.path.join(os.path.dirname(__file__), "cases.db")
@@ -81,13 +118,14 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint para verificar que el backend está funcionando."""
-    return {
-        "status": "healthy",
-        "service": "simts-backend",
-        "db_connected": os.path.exists(DB_PATH),
-        "openai_configured": bool(OPENAI_API_KEY)
-    }
+    """Comprehensive health check endpoint for monitoring."""
+    health = HealthChecker.get_comprehensive_health(DB_PATH, OPENAI_API_KEY)
+    health["metrics"] = metrics_collector.get_metrics()
+    
+    # Return appropriate status code based on health
+    status_code = 200 if health["healthy"] else 503
+    
+    return JSONResponse(content=health, status_code=status_code)
 
 
 class SimulateRequest(BaseModel):
@@ -108,6 +146,27 @@ class SimulateRequest(BaseModel):
     case_text: Optional[str] = None
     student_id: Optional[str] = None
     options: dict = {}
+    
+    @validator('theme', 'case_text', 'case_id')
+    def sanitize_text_fields(cls, v):
+        """Sanitize text inputs to prevent injection."""
+        if v:
+            return InputValidator.sanitize_string(v, max_length=5000)
+        return v
+    
+    @validator('difficulty')
+    def validate_difficulty(cls, v):
+        """Validate difficulty level."""
+        if v and v not in ['basico', 'intermedio', 'avanzado']:
+            raise ValueError('Difficulty must be one of: basico, intermedio, avanzado')
+        return v
+    
+    @validator('case_length')
+    def validate_case_length(cls, v):
+        """Validate case length."""
+        if v and v not in ['corto', 'medio', 'extenso']:
+            raise ValueError('Case length must be one of: corto, medio, extenso')
+        return v
 
 
 def extract_text_from_response(response) -> Optional[str]:
@@ -135,22 +194,32 @@ def extract_text_from_response(response) -> Optional[str]:
                     if t:
                         parts.append(t)
             if parts:
-                return "\n".join(parts)
+                text = "\n".join(parts)
+                # Sanitize the response to prevent injection
+                return InputValidator.sanitize_openai_response(text)
 
     # Fallback: si response tiene atributo 'output_text' u 'output', intentarlo
     if hasattr(response, "output_text"):
-        return getattr(response, "output_text")
+        text = getattr(response, "output_text")
+        return InputValidator.sanitize_openai_response(text)
 
     return None
 
 
 @app.post("/api/simulate")
-async def simulate(req: SimulateRequest):
+async def simulate(req: SimulateRequest, request: Request):
     """Recibe el texto del caso y llama al prompt ID preconfigurado en el servidor.
 
     Nota: el `prompt id` está incrustado aquí según lo provisto; si querés usar
     diferentes prompts por caso, pasalos en `options`.
     """
+    # Apply rate limiting - 10 requests per minute per IP
+    client_ip = get_client_ip(request)
+    if not rate_limiter.is_allowed(client_ip, max_requests=10, window_seconds=60):
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded. Maximum 10 requests per minute."
+        )
 
     PROMPT_ID = "pmpt_692bbe09d0b481968c7281d521eb16760a51d9f0c77edf52"
 
@@ -504,6 +573,22 @@ async def remove_case_from_collection_endpoint(collection_id: int, case_id: int)
 class LoginRequest(BaseModel):
     username: str
     password: str
+    
+    @validator('username')
+    def validate_username(cls, v):
+        """Validate and sanitize username."""
+        if not v or len(v) < 3 or len(v) > 50:
+            raise ValueError('Username must be between 3 and 50 characters')
+        return InputValidator.sanitize_string(v, max_length=50)
+    
+    @validator('password')
+    def validate_password(cls, v):
+        """Validate password."""
+        if not v or len(v) < 4:
+            raise ValueError('Password must be at least 4 characters')
+        if len(v) > 100:
+            raise ValueError('Password is too long')
+        return v
 
 
 class SubmitAnswersRequest(BaseModel):
@@ -518,11 +603,21 @@ class FeedbackRequest(BaseModel):
 
 
 @app.post("/api/auth/login")
-async def student_login(req: LoginRequest):
-    """Login para estudiantes."""
+async def student_login(req: LoginRequest, request: Request):
+    """Login para estudiantes con rate limiting."""
+    # Apply rate limiting - 5 login attempts per minute per IP
+    client_ip = get_client_ip(request)
+    if not rate_limiter.is_allowed(client_ip, max_requests=5, window_seconds=60):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Please try again later."
+        )
+    
     try:
         student = _db.authenticate_student(DB_PATH, req.username, req.password)
         if not student:
+            # Add a small delay to prevent timing attacks
+            time.sleep(0.5)
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
         return {"ok": True, "student": student, "token": f"student-{student['id']}"}
     except HTTPException:
