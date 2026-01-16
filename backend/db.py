@@ -119,12 +119,21 @@ def init_db(db_path: str):
         pass
     conn.commit()
     
+    # Crear índices para mejorar performance
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_students_username ON students(username)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_student ON student_sessions(student_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_sessions_case ON student_sessions(case_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_answers_session ON student_answers(session_id)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_theme ON cases(theme)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status)")
+    conn.commit()
+    
     # Insertar estudiante de prueba si no existe
     cur.execute("SELECT COUNT(*) FROM students WHERE username = ?", ("estudiante1",))
     if cur.fetchone()[0] == 0:
-        # Password hash simple para demo (en producción usar bcrypt)
-        import hashlib
-        pw_hash = hashlib.sha256("pass".encode()).hexdigest()
+        # Password hash usando bcrypt para seguridad
+        from security import hash_password
+        pw_hash = hash_password("pass")
         cur.execute(
             "INSERT INTO students (username, password_hash, name, created_at, status) VALUES (?, ?, ?, ?, ?)",
             ("estudiante1", pw_hash, "Estudiante Demo", datetime.utcnow().isoformat(), "active")
@@ -545,19 +554,57 @@ def delete_collection(db_path: str, collection_id: int) -> bool:
 # --- Student authentication and answers ---
 
 def authenticate_student(db_path: str, username: str, password: str) -> Optional[Dict]:
-    """Autentica estudiante y devuelve su info si el password es correcto."""
+    """Autentica estudiante y devuelve su info si el password es correcto.
+    
+    Soporta tanto bcrypt (recomendado) como SHA256 (legacy) para backward compatibility.
+    Si se usa SHA256, automáticamente migra el password a bcrypt después de verificar.
+    """
+    from security import verify_password, is_bcrypt_hash, hash_password
     import hashlib
-    pw_hash = hashlib.sha256(password.encode()).hexdigest()
+    import logging
+    
+    logger = logging.getLogger("simts.db")
+    
     conn = _connect(db_path)
     cur = conn.cursor()
     cur.execute(
-        "SELECT id, username, name, email, created_at, status FROM students WHERE username = ? AND password_hash = ? AND status = 'active'",
-        (username, pw_hash)
+        "SELECT id, username, name, email, created_at, status, password_hash FROM students WHERE username = ? AND status = 'active'",
+        (username,)
     )
     row = cur.fetchone()
-    conn.close()
+    
     if not row:
+        conn.close()
         return None
+    
+    stored_hash = row[6]
+    student_id = row[0]
+    
+    # Verify password using bcrypt or fallback to SHA256 for legacy passwords
+    if is_bcrypt_hash(stored_hash):
+        # Use bcrypt verification
+        if not verify_password(password, stored_hash):
+            conn.close()
+            return None
+    else:
+        # Legacy SHA256 verification (for backward compatibility)
+        logger.warning(f"Student {username} using legacy SHA256 password - will migrate to bcrypt")
+        pw_hash = hashlib.sha256(password.encode()).hexdigest()
+        if pw_hash != stored_hash:
+            conn.close()
+            return None
+        
+        # Password is correct - migrate to bcrypt automatically
+        new_hash = hash_password(password)
+        cur.execute(
+            "UPDATE students SET password_hash = ? WHERE id = ?",
+            (new_hash, student_id)
+        )
+        conn.commit()
+        logger.info(f"Migrated password for student {username} from SHA256 to bcrypt")
+    
+    conn.close()
+    
     return {
         "id": row[0],
         "username": row[1],
@@ -565,6 +612,55 @@ def authenticate_student(db_path: str, username: str, password: str) -> Optional
         "email": row[3],
         "created_at": row[4],
         "status": row[5]
+    }
+
+
+def create_student(db_path: str, username: str, password: str, name: str, email: Optional[str] = None) -> Dict:
+    """Crea un nuevo estudiante con password hasheado usando bcrypt.
+    
+    Args:
+        db_path: Ruta a la base de datos
+        username: Nombre de usuario único
+        password: Contraseña en texto plano (será hasheada)
+        name: Nombre completo del estudiante
+        email: Email opcional del estudiante
+        
+    Returns:
+        Dict con información del estudiante creado
+        
+    Raises:
+        ValueError: Si el username ya existe
+    """
+    from security import hash_password
+    
+    conn = _connect(db_path)
+    cur = conn.cursor()
+    
+    # Verificar si el username ya existe
+    cur.execute("SELECT COUNT(*) FROM students WHERE username = ?", (username,))
+    if cur.fetchone()[0] > 0:
+        conn.close()
+        raise ValueError("Username already exists")
+    
+    # Hash password y crear estudiante
+    pw_hash = hash_password(password)
+    created_at = datetime.utcnow().isoformat()
+    
+    cur.execute(
+        "INSERT INTO students (username, password_hash, name, email, created_at, status) VALUES (?, ?, ?, ?, ?, ?)",
+        (username, pw_hash, name, email, created_at, "active")
+    )
+    conn.commit()
+    student_id = cur.lastrowid
+    conn.close()
+    
+    return {
+        "id": student_id,
+        "username": username,
+        "name": name,
+        "email": email,
+        "created_at": created_at,
+        "status": "active"
     }
 
 

@@ -49,6 +49,7 @@ Thumbs.db
 *.swo
 
 # Database
+*.db
 *.db-journal
 *.sqlite3
 

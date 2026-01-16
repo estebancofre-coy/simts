@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
+const API_BASE = import.meta.env.VITE_API_URL || 
+                 (import.meta.env.DEV ? 'http://localhost:8000' : 'https://simts.onrender.com')
 
 export default function StudentLoginModal({ onLogin, onCancel }) {
   const [username, setUsername] = useState('')
@@ -26,10 +27,13 @@ export default function StudentLoginModal({ onLogin, onCancel }) {
         throw new Error(data.error || 'Error al iniciar sesión')
       }
 
-      // Guardar datos del estudiante en localStorage
-      localStorage.setItem('studentAuth', 'true')
-      localStorage.setItem('studentData', JSON.stringify(data.student))
-      localStorage.setItem('studentToken', data.token)
+      // Guardar datos del estudiante en sessionStorage (más seguro que localStorage)
+      sessionStorage.setItem('studentAuth', 'true')
+      sessionStorage.setItem('studentData', JSON.stringify(data.student))
+      // TODO: Para producción, implementar HttpOnly cookies en el backend
+      // El token debe venir en cookie HttpOnly desde el backend para mayor seguridad
+      // y evitar vulnerabilidades XSS. Por ahora lo guardamos en sessionStorage como mejora temporal.
+      sessionStorage.setItem('studentToken', data.token)
 
       onLogin(data.student)
     } catch (err) {

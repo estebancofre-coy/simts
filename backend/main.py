@@ -4,11 +4,14 @@ import json
 import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, EmailStr
 from dotenv import load_dotenv
+from prometheus_fastapi_instrumentator import Instrumentator
 import db as _db
+import auth
+from middleware.rate_limit import limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 
 # Carga variables de entorno desde .env en desarrollo
 load_dotenv()
@@ -44,14 +47,29 @@ client = ClientWrapper(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
 
-# Configurar CORS para permitir peticiones desde el frontend
+# Configurar rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Configurar CORS con orígenes específicos desde variables de entorno
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+
+if not allowed_origins:
+    logger.warning("No ALLOWED_ORIGINS configured, using default localhost:5173")
+    allowed_origins = ["http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes (simplifica para desarrollo/producción)
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Permite GET, POST, etc.
-    allow_headers=["*"],  # Permite todos los headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+# Configurar Prometheus metrics
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 # Inicializar DB de persistencia
 DB_PATH = os.getenv("SIMTS_DB_PATH") or os.path.join(os.path.dirname(__file__), "cases.db")
@@ -145,7 +163,8 @@ def extract_text_from_response(response) -> Optional[str]:
 
 
 @app.post("/api/simulate")
-async def simulate(req: SimulateRequest):
+@limiter.limit("10/minute")
+async def simulate(request: Request, req: SimulateRequest):
     """Recibe el texto del caso y llama al prompt ID preconfigurado en el servidor.
 
     Nota: el `prompt id` está incrustado aquí según lo provisto; si querés usar
@@ -504,6 +523,43 @@ async def remove_case_from_collection_endpoint(collection_id: int, case_id: int)
 class LoginRequest(BaseModel):
     username: str
     password: str
+    
+    @field_validator('username')
+    @classmethod
+    def username_alphanumeric(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError('Username must be at least 3 characters')
+        return v
+    
+    @field_validator('password')
+    @classmethod
+    def password_not_empty(cls, v):
+        if not v or len(v) < 4:
+            raise ValueError('Password must be at least 4 characters')
+        return v
+
+
+class StudentCreate(BaseModel):
+    username: str
+    email: Optional[EmailStr] = None
+    password: str
+    name: str
+    
+    @field_validator('username')
+    @classmethod
+    def username_alphanumeric(cls, v):
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError('Username must be alphanumeric (underscores and hyphens allowed)')
+        if len(v) < 3:
+            raise ValueError('Username must be at least 3 characters')
+        return v
+    
+    @field_validator('password')
+    @classmethod
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
 
 
 class SubmitAnswersRequest(BaseModel):
@@ -518,13 +574,23 @@ class FeedbackRequest(BaseModel):
 
 
 @app.post("/api/auth/login")
-async def student_login(req: LoginRequest):
-    """Login para estudiantes."""
+@limiter.limit("5/minute")
+async def student_login(request: Request, req: LoginRequest):
+    """Login para estudiantes con rate limiting (máximo 5 intentos por minuto)."""
     try:
         student = _db.authenticate_student(DB_PATH, req.username, req.password)
         if not student:
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-        return {"ok": True, "student": student, "token": f"student-{student['id']}"}
+        
+        # Crear JWT token
+        token_data = {
+            "user_id": student['id'],
+            "username": student['username'],
+            "user_type": "student"
+        }
+        token = auth.create_access_token(token_data)
+        
+        return {"ok": True, "student": student, "token": token}
     except HTTPException:
         raise
     except Exception as e:
@@ -532,11 +598,25 @@ async def student_login(req: LoginRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/answers")
-async def submit_answers(req: SubmitAnswersRequest):
-    """Estudiante envía sus respuestas para un caso. Requiere autenticación."""
+@app.post("/api/auth/register")
+@limiter.limit("3/minute")
+async def student_register(request: Request, req: StudentCreate):
+    """Registro de nuevos estudiantes con rate limiting (máximo 3 registros por minuto)."""
     try:
-        student_id = 1  # TODO: extraer de token
+        student = _db.create_student(DB_PATH, req.username, req.password, req.name, req.email)
+        return {"ok": True, "student": student, "message": "Estudiante registrado exitosamente"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Error registrando estudiante")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/answers")
+async def submit_answers(req: SubmitAnswersRequest, current_user: dict = Depends(auth.get_current_student)):
+    """Estudiante envía sus respuestas para un caso. Requiere autenticación JWT."""
+    try:
+        student_id = current_user["user_id"]  # Extract from JWT token
         session_id = _db.create_session(DB_PATH, student_id, req.case_id)
         
         case = _db.get_case(DB_PATH, req.case_id)
@@ -577,9 +657,25 @@ async def submit_answers(req: SubmitAnswersRequest):
 
 
 @app.get("/api/answers")
-async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] = None, session_id: Optional[int] = None, limit: int = 100):
-    """Obtiene respuestas (para docentes o estudiante propio)."""
+async def get_answers(
+    student_id: Optional[int] = None, 
+    case_id: Optional[int] = None, 
+    session_id: Optional[int] = None, 
+    limit: int = 100,
+    current_user: dict = Depends(auth.get_current_student)
+):
+    """Obtiene respuestas del estudiante autenticado. Requiere JWT authentication."""
     try:
+        # Solo permitir que el estudiante vea sus propias respuestas
+        authenticated_student_id = current_user["user_id"]
+        
+        # Si se especifica un student_id diferente, verificar que sea el mismo usuario
+        if student_id is not None and student_id != authenticated_student_id:
+            raise HTTPException(status_code=403, detail="No autorizado para ver respuestas de otros estudiantes")
+        
+        # Usar el student_id del token
+        student_id = authenticated_student_id
+        
         # Obtener todas las sesiones con filtros básicos
         sessions = _db.get_student_sessions(DB_PATH, student_id=student_id, case_id=case_id, limit=limit)
         
@@ -643,7 +739,12 @@ async def get_answers(student_id: Optional[int] = None, case_id: Optional[int] =
 
 @app.put("/api/answers/{answer_id}/feedback")
 async def update_feedback(answer_id: int, req: FeedbackRequest):
-    """Docente agrega feedback y score a una respuesta."""
+    """Docente agrega feedback y score a una respuesta.
+    
+    TODO: Implementar autenticación de docentes.
+    Por ahora este endpoint está sin autenticación para facilitar desarrollo.
+    En producción debe requerir JWT de tipo 'teacher'.
+    """
     try:
         updated = _db.update_answer_feedback(DB_PATH, answer_id, req.feedback, req.score)
         if not updated:
@@ -658,7 +759,12 @@ async def update_feedback(answer_id: int, req: FeedbackRequest):
 
 @app.get("/api/students")
 async def list_students():
-    """Lista estudiantes (para panel docente)."""
+    """Lista todos los estudiantes.
+    
+    TODO: Implementar autenticación de docentes.
+    Por ahora este endpoint está sin autenticación para facilitar desarrollo.
+    En producción debe requerir JWT de tipo 'teacher'.
+    """
     try:
         students = _db.list_students(DB_PATH)
         return {"ok": True, "students": students}
