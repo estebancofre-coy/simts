@@ -1,0 +1,20 @@
+# Production dependencies for SimTS Backend
+# Base requirements
+-r requirements.txt
+
+# Security
+bcrypt==4.1.2
+slowapi==0.1.9
+
+# Monitoring & Observability
+prometheus-fastapi-instrumentator==6.1.0
+
+# Error tracking (optional - requires Sentry account)
+# sentry-sdk[fastapi]==1.40.0
+
+# Redis for distributed rate limiting (optional)
+# redis==5.0.1
+
+# Additional production utilities
+gunicorn==22.0.0
+python-multipart==0.0.18
