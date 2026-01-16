@@ -171,13 +171,18 @@ CREATE TABLE students (
 
 ### Consideraciones de Seguridad
 
-**⚠️ IMPORTANTE:** En producción, las contraseñas deben estar hasheadas. Actualmente el sistema usa contraseñas en texto plano para desarrollo.
+**✅ IMPLEMENTADO:** El sistema ahora usa bcrypt para hash seguro de contraseñas.
 
-**Para producción, implementar:**
-1. Hash de contraseñas con bcrypt o similar
-2. Sistema de registro con validación de email
-3. Recuperación de contraseñas
-4. Panel administrativo para gestión de usuarios
+**Características de seguridad implementadas:**
+1. ✅ Hash de contraseñas con bcrypt
+2. ✅ Rate limiting en endpoints críticos
+3. ✅ Validación de entradas con Pydantic
+4. ✅ Headers de seguridad (CSP, X-Frame-Options, etc.)
+5. ✅ Sanitización de respuestas de OpenAI
+6. ✅ Almacenamiento seguro en frontend (localStorage encriptado)
+7. ✅ Auto-logout por inactividad (30 minutos)
+
+Ver [SECURITY.md](./SECURITY.md) para más detalles.
 
 ### Próximas Mejoras
 
@@ -187,4 +192,154 @@ Se planea implementar:
 - Importación masiva desde CSV/Excel
 - Integración con sistemas institucionales (LDAP, OAuth)
 - Gestión de roles y permisos
+
+---
+
+## 🔐 Seguridad en Producción
+
+SimTS implementa múltiples capas de seguridad para uso en producción:
+
+### Variables de Entorno Requeridas
+
+**Backend (.env):**
+```bash
+OPENAI_API_KEY=your_api_key_here
+ALLOWED_ORIGINS=https://yourdomain.com
+SIMTS_DB_PATH=./cases.db
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+```
+
+**Frontend (.env):**
+```bash
+VITE_API_URL=https://your-backend-url.com
+```
+
+Ver `.env.example` en cada directorio para más detalles.
+
+### Características de Seguridad
+
+#### Backend
+- **Bcrypt Password Hashing:** Contraseñas hasheadas con bcrypt (salt rounds: 12)
+- **Rate Limiting:** 
+  - Login: 5 intentos/minuto por IP
+  - Simulate: 10 requests/minuto por IP
+- **Input Validation:** Validación con Pydantic en todos los endpoints
+- **Security Headers:** CSP, X-Frame-Options, HSTS, X-Content-Type-Options
+- **CORS Policy:** Allowlist configurable (no usar * en producción)
+- **SQL Injection Prevention:** Queries parametrizadas
+- **OpenAI Response Sanitization:** Prevención de inyección de código
+
+#### Frontend
+- **Secure Storage:** LocalStorage encriptado para datos sensibles
+- **Session Management:** Auto-logout después de 30 minutos de inactividad
+- **Input Sanitization:** Validación y sanitización de entradas
+- **Request Timeout:** 30 segundos por defecto
+- **Retry Logic:** Reintento automático con exponential backoff
+- **Error Handling:** Manejo específico de errores 429 (rate limit) y 503 (unavailable)
+
+### Procedimiento de Backup de Base de Datos
+
+```bash
+# Backup manual
+cp backend/cases.db backend/cases.db.backup.$(date +%Y%m%d_%H%M%S)
+
+# Backup automático (agregar a crontab)
+0 2 * * * /path/to/simts/scripts/backup_db.sh
+
+# Restaurar backup
+cp backend/cases.db.backup.YYYYMMDD_HHMMSS backend/cases.db
+```
+
+### Troubleshooting de Errores Comunes
+
+#### Error: "VITE_API_URL no configurada"
+**Solución:** Crear archivo `.env` en `frontend/` con:
+```bash
+VITE_API_URL=http://localhost:8000  # o tu URL de producción
+```
+
+#### Error: "Rate limit exceeded"
+**Causa:** Demasiadas solicitudes en poco tiempo
+**Solución:** Esperar 60 segundos o contactar al administrador para ajustar límites
+
+#### Error: "bcrypt not available"
+**Solución:** Instalar bcrypt:
+```bash
+cd backend
+pip install bcrypt
+```
+
+#### Error: Database locked
+**Causa:** Múltiples procesos accediendo a SQLite simultáneamente
+**Solución:** 
+- Usar un solo proceso de backend
+- Considerar migrar a PostgreSQL para alto tráfico
+
+#### Error: "CORS policy blocked"
+**Solución:** Verificar que ALLOWED_ORIGINS incluya el dominio del frontend:
+```bash
+# En backend/.env
+ALLOWED_ORIGINS=http://localhost:5173,https://yourdomain.com
+```
+
+### Monitoreo y Logging
+
+El sistema incluye logging estructurado y métricas:
+
+```python
+# Ver logs
+tail -f backend/uvicorn.log
+
+# Logs incluyen:
+# - Timestamp
+# - Nivel (INFO, WARNING, ERROR)
+# - Endpoint
+# - Código de respuesta
+# - Tiempo de respuesta
+```
+
+**Endpoint de health check:**
+```bash
+curl http://localhost:8000/api/health
+```
+
+Responde con estado de:
+- Base de datos
+- OpenAI API
+- Espacio en disco
+- Métricas (uptime, total requests, error rate)
+
+### Testing
+
+```bash
+# Backend tests
+cd backend
+pytest --cov --cov-report=term
+
+# Security scan
+pip install bandit
+bandit -r . -ll
+
+# Frontend tests
+cd frontend
+npm test
+npm run build
+
+# Security audit
+npm audit
+```
+
+### CI/CD
+
+El proyecto incluye GitHub Actions para:
+- ✅ Tests automáticos (backend y frontend)
+- ✅ Security scans (bandit, npm audit)
+- ✅ Code quality checks
+- ✅ Integration tests
+- ✅ Coverage reports
+
+Ver `.github/workflows/ci.yml` para detalles.
+
+---
 
