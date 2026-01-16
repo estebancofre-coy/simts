@@ -275,7 +275,13 @@ export const getApiBaseUrl = () => {
   
   if (!apiUrl) {
     // Generic error message for production security
-    throw new Error('API configuration error. Please contact support.');
+    if (import.meta.env.MODE === 'production') {
+      throw new Error('API configuration error. Please contact support.');
+    } else {
+      // More detailed error in development
+      console.error('VITE_API_URL not configured');
+      throw new Error('Backend URL not configured. Set VITE_API_URL in .env');
+    }
   }
   
   return apiUrl;

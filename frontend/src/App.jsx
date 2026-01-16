@@ -10,10 +10,11 @@ let API_BASE;
 try {
   API_BASE = getApiBaseUrl();
 } catch (error) {
-  console.error('API configuration error:', error);
-  // Fallback for development
+  // Use fallback for development/compatibility
   API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com';
-  console.warn('Using fallback API URL:', API_BASE);
+  if (import.meta.env.MODE !== 'production') {
+    console.warn('Using fallback API URL');
+  }
 }
 
 // Componente para preguntas interactivas

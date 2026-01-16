@@ -32,7 +32,9 @@ const decodeData = (encoded) => {
 };
 
 /**
- * Secure storage wrapper for localStorage with encryption
+ * Storage wrapper for localStorage with base64 obfuscation.
+ * 
+ * SECURITY NOTE: Uses base64 for obfuscation only, NOT encryption.
  */
 export const secureStorage = {
   set: (key, value) => {
