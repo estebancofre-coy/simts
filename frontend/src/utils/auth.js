@@ -2,14 +2,17 @@
  * Authentication utilities for SimTS frontend.
  * 
  * Provides:
- * - Secure localStorage with encryption
+ * - Secure localStorage with base64 encoding (NOT encryption - for obfuscation only)
  * - Token validation
  * - Session management with auto-refresh
  * - Auto-logout on inactivity
+ * 
+ * SECURITY NOTE: base64 encoding is used for obfuscation only, not security.
+ * For production, consider implementing proper encryption with Web Crypto API or a library like crypto-js.
  */
 
-// Simple encryption/decryption using base64 encoding
-// In production, consider using crypto-js for stronger encryption
+// Base64 encoding for obfuscation (NOT encryption)
+// This prevents casual inspection but provides NO security
 const encodeData = (data) => {
   try {
     return btoa(JSON.stringify(data));
@@ -80,11 +83,17 @@ export const secureStorage = {
 
 /**
  * Token validator
+ * 
+ * SECURITY NOTE: This is basic validation only. In production, implement:
+ * - JWT signature verification
+ * - Expiration time validation
+ * - Issuer validation
  */
 export const tokenValidator = {
   isValid: (token) => {
     if (!token) return false;
-    // Basic validation - in production, verify JWT signature
+    // Basic format validation only - does NOT verify authenticity
+    // In production, verify JWT signature with backend public key
     return token.startsWith('student-') || token.startsWith('teacher-');
   },
 
@@ -233,15 +242,20 @@ export const sessionManager = new SessionManager();
 
 /**
  * Input sanitizer to prevent XSS
+ * 
+ * SECURITY NOTE: This is basic sanitization. For production HTML content,
+ * use a comprehensive library like DOMPurify for complete XSS protection.
  */
 export const sanitizeInput = (input) => {
   if (typeof input !== 'string') return input;
   
-  // Remove potentially dangerous characters
+  // Basic sanitization - removes common XSS vectors
+  // For production with user-generated HTML, use DOMPurify
   return input
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
     .replace(/on\w+=/gi, '')
+    .replace(/data:text\/html/gi, '')
     .trim();
 };
 

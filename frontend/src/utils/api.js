@@ -274,8 +274,8 @@ export const getApiBaseUrl = () => {
   const apiUrl = import.meta.env.VITE_API_URL;
   
   if (!apiUrl) {
-    console.error('VITE_API_URL environment variable is not configured');
-    throw new Error('Backend URL not configured. Please set VITE_API_URL environment variable.');
+    // Generic error message for production security
+    throw new Error('API configuration error. Please contact support.');
   }
   
   return apiUrl;

@@ -231,12 +231,18 @@ Ver `.env.example` en cada directorio para más detalles.
 - **OpenAI Response Sanitization:** Prevención de inyección de código
 
 #### Frontend
-- **Secure Storage:** LocalStorage encriptado para datos sensibles
+- **Secure Storage:** LocalStorage con base64 encoding (ofuscación, no encriptación)
 - **Session Management:** Auto-logout después de 30 minutos de inactividad
-- **Input Sanitization:** Validación y sanitización de entradas
+- **Input Sanitization:** Validación y sanitización básica de entradas
 - **Request Timeout:** 30 segundos por defecto
 - **Retry Logic:** Reintento automático con exponential backoff
 - **Error Handling:** Manejo específico de errores 429 (rate limit) y 503 (unavailable)
+
+**Nota de Seguridad Frontend:** El almacenamiento usa base64 para ofuscación, NO encriptación. 
+Para producción con requisitos de alta seguridad, considere:
+- Implementar encriptación real con Web Crypto API o crypto-js
+- Usar JWT con verificación de firma
+- Implementar bibliotecas de sanitización como DOMPurify para HTML
 
 ### Procedimiento de Backup de Base de Datos
 

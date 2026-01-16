@@ -37,12 +37,12 @@ export default function StudentLoginModal({ onLogin, onCancel }) {
     // Validate inputs
     const cleanUsername = sanitizeInput(username.trim());
     if (!validateUsername(cleanUsername)) {
-      setError('Usuario inválido. Debe tener entre 3-50 caracteres alfanuméricos.');
+      setError('Formato de usuario inválido.');
       return;
     }
     
     if (password.length < 4) {
-      setError('La contraseña debe tener al menos 4 caracteres.');
+      setError('Contraseña inválida.');
       return;
     }
 
