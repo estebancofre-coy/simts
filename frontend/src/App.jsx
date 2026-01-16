@@ -3,8 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import TeacherPanel from './TeacherPanel'
 import LoginModal from './LoginModal'
 import StudentLoginModal from './StudentLoginModal'
+import { getApiBaseUrl } from './utils/api'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
+// Validate API URL at startup
+let API_BASE;
+try {
+  API_BASE = getApiBaseUrl();
+} catch (error) {
+  console.error('API configuration error:', error);
+  // Fallback for development
+  API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com';
+  console.warn('Using fallback API URL:', API_BASE);
+}
 
 // Componente para preguntas interactivas
 function QuestionsList({ questions, openAnswers, onOpenAnswerChange, onAnswersChange }) {

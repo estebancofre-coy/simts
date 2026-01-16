@@ -1,6 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { getApiBaseUrl, apiPost } from './utils/api'
+import { secureStorage, sanitizeInput, validateUsername, sessionManager } from './utils/auth'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
+// Validate API URL at startup
+let API_BASE;
+try {
+  API_BASE = getApiBaseUrl();
+} catch (error) {
+  console.error('API configuration error:', error);
+  API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com';
+  console.warn('Using fallback API URL:', API_BASE);
+}
 
 export default function StudentLoginModal({ onLogin, onCancel }) {
   const [username, setUsername] = useState('')
@@ -8,32 +18,67 @@ export default function StudentLoginModal({ onLogin, onCancel }) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Check for existing session on mount
+  useEffect(() => {
+    const existingToken = secureStorage.get('studentToken');
+    const existingData = secureStorage.get('studentData');
+    
+    if (existingToken && existingData) {
+      // Auto-login if session exists
+      sessionManager.start();
+      onLogin(existingData);
+    }
+  }, [onLogin]);
+
   async function handleLogin(e) {
     e.preventDefault()
     setError('')
+    
+    // Validate inputs
+    const cleanUsername = sanitizeInput(username.trim());
+    if (!validateUsername(cleanUsername)) {
+      setError('Usuario inválido. Debe tener entre 3-50 caracteres alfanuméricos.');
+      return;
+    }
+    
+    if (password.length < 4) {
+      setError('La contraseña debe tener al menos 4 caracteres.');
+      return;
+    }
+
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      })
+      const data = await apiPost(
+        `${API_BASE}/api/auth/login`,
+        { username: cleanUsername, password },
+        { timeout: 10000 } // 10 second timeout for login
+      );
 
-      const data = await response.json()
-
-      if (!response.ok || !data.ok) {
+      if (!data.ok) {
         throw new Error(data.error || 'Error al iniciar sesión')
       }
 
-      // Guardar datos del estudiante en localStorage
-      localStorage.setItem('studentAuth', 'true')
-      localStorage.setItem('studentData', JSON.stringify(data.student))
-      localStorage.setItem('studentToken', data.token)
+      // Use secure storage for sensitive data
+      secureStorage.set('studentAuth', true);
+      secureStorage.set('studentData', data.student);
+      secureStorage.set('studentToken', data.token);
+      
+      // Start session monitoring
+      sessionManager.start();
 
       onLogin(data.student)
     } catch (err) {
-      setError(err.message)
+      // Handle specific error cases
+      if (err.status === 429) {
+        setError('Demasiados intentos de inicio de sesión. Por favor, espera un momento.');
+      } else if (err.status === 503) {
+        setError('El servicio no está disponible temporalmente. Intenta nuevamente más tarde.');
+      } else if (err.message.includes('timeout')) {
+        setError('La solicitud tardó demasiado. Verifica tu conexión e intenta nuevamente.');
+      } else {
+        setError(err.message || 'Error al iniciar sesión')
+      }
     } finally {
       setLoading(false)
     }
