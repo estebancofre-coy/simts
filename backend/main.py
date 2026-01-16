@@ -4,11 +4,14 @@ import json
 import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, validator, EmailStr
 from dotenv import load_dotenv
+from prometheus_fastapi_instrumentator import Instrumentator
 import db as _db
+import auth
+from middleware.rate_limit import limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 
 # Carga variables de entorno desde .env en desarrollo
 load_dotenv()
@@ -44,14 +47,23 @@ client = ClientWrapper(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
 
-# Configurar CORS para permitir peticiones desde el frontend
+# Configurar rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Configurar CORS con orígenes específicos desde variables de entorno
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Permite todos los orígenes (simplifica para desarrollo/producción)
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Permite GET, POST, etc.
-    allow_headers=["*"],  # Permite todos los headers
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+# Configurar Prometheus metrics
+instrumentator = Instrumentator()
+instrumentator.instrument(app).expose(app)
 
 # Inicializar DB de persistencia
 DB_PATH = os.getenv("SIMTS_DB_PATH") or os.path.join(os.path.dirname(__file__), "cases.db")
@@ -145,7 +157,8 @@ def extract_text_from_response(response) -> Optional[str]:
 
 
 @app.post("/api/simulate")
-async def simulate(req: SimulateRequest):
+@limiter.limit("10/minute")
+async def simulate(request: Request, req: SimulateRequest):
     """Recibe el texto del caso y llama al prompt ID preconfigurado en el servidor.
 
     Nota: el `prompt id` está incrustado aquí según lo provisto; si querés usar
@@ -504,6 +517,39 @@ async def remove_case_from_collection_endpoint(collection_id: int, case_id: int)
 class LoginRequest(BaseModel):
     username: str
     password: str
+    
+    @validator('username')
+    def username_alphanumeric(cls, v):
+        if not v or len(v) < 3:
+            raise ValueError('Username must be at least 3 characters')
+        return v
+    
+    @validator('password')
+    def password_not_empty(cls, v):
+        if not v or len(v) < 4:
+            raise ValueError('Password must be at least 4 characters')
+        return v
+
+
+class StudentCreate(BaseModel):
+    username: str
+    email: Optional[EmailStr] = None
+    password: str
+    name: str
+    
+    @validator('username')
+    def username_alphanumeric(cls, v):
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError('Username must be alphanumeric (underscores and hyphens allowed)')
+        if len(v) < 3:
+            raise ValueError('Username must be at least 3 characters')
+        return v
+    
+    @validator('password')
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
 
 
 class SubmitAnswersRequest(BaseModel):
@@ -518,17 +564,40 @@ class FeedbackRequest(BaseModel):
 
 
 @app.post("/api/auth/login")
-async def student_login(req: LoginRequest):
-    """Login para estudiantes."""
+@limiter.limit("5/minute")
+async def student_login(request: Request, req: LoginRequest):
+    """Login para estudiantes con rate limiting (máximo 5 intentos por minuto)."""
     try:
         student = _db.authenticate_student(DB_PATH, req.username, req.password)
         if not student:
             raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
-        return {"ok": True, "student": student, "token": f"student-{student['id']}"}
+        
+        # Crear JWT token
+        token_data = {
+            "user_id": student['id'],
+            "username": student['username'],
+            "user_type": "student"
+        }
+        token = auth.create_access_token(token_data)
+        
+        return {"ok": True, "student": student, "token": token}
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("Error en login de estudiante")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/auth/register")
+async def student_register(req: StudentCreate):
+    """Registro de nuevos estudiantes."""
+    try:
+        student = _db.create_student(DB_PATH, req.username, req.password, req.name, req.email)
+        return {"ok": True, "student": student, "message": "Estudiante registrado exitosamente"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("Error registrando estudiante")
         raise HTTPException(status_code=500, detail=str(e))
 
 

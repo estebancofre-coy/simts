@@ -4,7 +4,8 @@ import TeacherPanel from './TeacherPanel'
 import LoginModal from './LoginModal'
 import StudentLoginModal from './StudentLoginModal'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
+const API_BASE = import.meta.env.VITE_API_URL || 
+                 (import.meta.env.DEV ? 'http://localhost:8000' : 'https://simts.onrender.com')
 
 // Componente para preguntas interactivas
 function QuestionsList({ questions, openAnswers, onOpenAnswerChange, onAnswersChange }) {

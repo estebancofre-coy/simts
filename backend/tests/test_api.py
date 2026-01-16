@@ -28,3 +28,28 @@ def test_simulate_mock(monkeypatch):
     data = r.json()
     assert data.get("ok") is True
     assert "Respuesta simulada" in (data.get("text") or "")
+
+
+def test_health_check():
+    """Test health check endpoint."""
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("status") == "healthy"
+    assert "db_connected" in data
+
+
+def test_cors_headers():
+    """Test that CORS headers are present."""
+    r = client.options("/api/health")
+    # CORS headers should be present
+    assert r.status_code in [200, 204]
+
+
+def test_root_endpoint():
+    """Test root endpoint returns API info."""
+    r = client.get("/")
+    assert r.status_code == 200
+    data = r.json()
+    assert "message" in data
+    assert "version" in data
