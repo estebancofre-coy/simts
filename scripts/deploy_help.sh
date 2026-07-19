@@ -88,10 +88,10 @@ echo ""
 echo -e "${BLUE}[3/5]${NC} Verificando variables de entorno..."
 
 if [ -f "backend/.env" ]; then
-    if grep -q "OPENAI_API_KEY" backend/.env; then
-        echo -e "${GREEN}✓${NC} OPENAI_API_KEY configurada localmente"
+    if grep -q "GEMINI_API_KEY\|OPENAI_API_KEY" backend/.env; then
+        echo -e "${GREEN}✓${NC} API de IA configurada localmente"
     else
-        echo -e "${YELLOW}!${NC} OPENAI_API_KEY no encontrada en backend/.env"
+        echo -e "${YELLOW}!${NC} GEMINI_API_KEY u OPENAI_API_KEY no encontrada en backend/.env"
     fi
 else
     echo -e "${YELLOW}!${NC} Archivo backend/.env no encontrado"
@@ -99,7 +99,8 @@ fi
 
 echo -e "\n${YELLOW}Importante:${NC} Recuerda configurar las siguientes variables de entorno en producción:"
 echo "  Render (Backend):"
-echo "    - OPENAI_API_KEY=sk-..."
+echo "    - GEMINI_API_KEY=tu-api-key"
+echo "    - SIMTS_LLM_PROVIDER=gemini"
 echo "    - PORT=10000"
 echo ""
 echo "  Vercel (Frontend):"
@@ -141,7 +142,7 @@ echo "     c. Selecciona 'Web Service'"
 echo "     d. Root Directory: 'backend'"
 echo "     e. Build Command: 'pip install -r requirements.txt'"
 echo "     f. Start Command: 'uvicorn main:app --host 0.0.0.0 --port \$PORT'"
-echo "     g. Agrega variables de entorno (OPENAI_API_KEY)"
+echo "     g. Agrega variables de entorno (GEMINI_API_KEY y SIMTS_LLM_PROVIDER)"
 echo ""
 echo "  2. Deploy del Frontend en Vercel:"
 echo "     a. Ve a https://vercel.com/new"

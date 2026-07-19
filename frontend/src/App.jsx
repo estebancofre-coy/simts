@@ -1,245 +1,152 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import TeacherPanel from './TeacherPanel'
-import LoginModal from './LoginModal'
-import StudentLoginModal from './StudentLoginModal'
+import { useEffect, useState } from 'react'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://simts.onrender.com'
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
-// Componente para preguntas interactivas
-function QuestionsList({ questions, openAnswers, onOpenAnswerChange, onAnswersChange }) {
-  const [selectedAnswers, setSelectedAnswers] = useState({})
-
-  const handleSelect = (questionIndex, optionIndex) => {
-    const newAnswers = {
-      ...selectedAnswers,
-      [questionIndex]: optionIndex
-    }
-    setSelectedAnswers(newAnswers)
-    // Notificar al padre sobre los cambios
-    if (onAnswersChange) {
-      onAnswersChange(newAnswers)
-    }
-  }
-
+function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
   return (
     <div style={{ marginTop: 20 }}>
-      <h3>Preguntas de evaluación</h3>
-      {questions.map((q, qIndex) => {
-        const selected = selectedAnswers[qIndex]
-        const isAnswered = selected !== undefined
-        const correctIndex = q.correct_index !== undefined ? q.correct_index : q.correctIndex
-        const isOpenEnded = !q.options || q.options.length === 0
-
-        return (
-          <div key={qIndex} style={{ 
-            marginBottom: 24, 
-            padding: 16, 
-            border: '1px solid #ddd', 
+      <h3>Preguntas de evaluacion</h3>
+      {questions.map((q, qIndex) => (
+        <div
+          key={qIndex}
+          style={{
+            marginBottom: 24,
+            padding: 16,
+            border: '1px solid #ddd',
             borderRadius: 8,
             backgroundColor: '#f9f9f9'
-          }}>
-            <div style={{ marginBottom: 12, fontWeight: 'bold', fontSize: 16 }}>
-              {qIndex + 1}. {q.question || q.text}
-            </div>
-            
-            {!isOpenEnded && (
-              <div style={{ marginLeft: 12 }}>
-                {(q.options || []).map((opt, oIndex) => {
-                  const isCorrect = oIndex === correctIndex
-                  const isSelected = selected === oIndex
-                  let bgColor = '#fff'
-                  let borderColor = '#ccc'
-                  let color = '#000'
-                  
-                  if (isAnswered) {
-                    if (isSelected) {
-                      if (isCorrect) {
-                        bgColor = '#d4edda'
-                        borderColor = '#28a745'
-                        color = '#155724'
-                      } else {
-                        bgColor = '#f8d7da'
-                        borderColor = '#dc3545'
-                        color = '#721c24'
-                      }
-                    } else if (isCorrect) {
-                      bgColor = '#d1ecf1'
-                      borderColor = '#17a2b8'
-                      color = '#0c5460'
-                    }
-                  }
-
-                  return (
-                    <div
-                      key={oIndex}
-                      onClick={() => !isAnswered && handleSelect(qIndex, oIndex)}
-                      style={{
-                        padding: '10px 14px',
-                        marginBottom: 8,
-                        border: `2px solid ${borderColor}`,
-                        borderRadius: 6,
-                        backgroundColor: bgColor,
-                        color: color,
-                        cursor: isAnswered ? 'default' : 'pointer',
-                        transition: 'all 0.2s',
-                        fontWeight: isCorrect && isAnswered ? 'bold' : 'normal'
-                      }}
-                    >
-                      <span style={{ marginRight: 8 }}>
-                        {String.fromCharCode(65 + oIndex)})
-                      </span>
-                      {opt}
-                      {isAnswered && isCorrect && ' ✓'}
-                      {isAnswered && isSelected && !isCorrect && ' ✗'}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {isOpenEnded && (
-              <div style={{ marginTop: 12 }}>
-                <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>Respuesta del estudiante</label>
-                <textarea
-                  value={openAnswers?.[qIndex] || ''}
-                  onChange={(e) => onOpenAnswerChange?.(qIndex, e.target.value)}
-                  rows={4}
-                  placeholder="Escribe tu respuesta aquí..."
-                  style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', resize: 'vertical' }}
-                />
-              </div>
-            )}
-
-            {isAnswered && (
-              <div style={{ 
-                marginTop: 12, 
-                padding: 12, 
-                backgroundColor: '#fff3cd', 
-                border: '1px solid #ffc107',
-                borderRadius: 6,
-                fontSize: 14
-              }}>
-                <strong>Justificación:</strong> {q.justification || q.explanation || 'No disponible'}
-              </div>
-            )}
+          }}
+        >
+          <div style={{ marginBottom: 12, fontWeight: 'bold', fontSize: 16 }}>
+            {qIndex + 1}. {q.question || q.text}
           </div>
-        )
-      })}
+
+          <div style={{ marginTop: 12 }}>
+            <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>
+              Analisis / respuesta abierta
+            </label>
+            <textarea
+              value={openAnswers?.[qIndex] || ''}
+              onChange={(e) => onOpenAnswerChange?.(qIndex, e.target.value)}
+              rows={4}
+              placeholder="Escribe aqui tu analisis del caso..."
+              style={{ width: '100%', padding: 10, borderRadius: 6, border: '1px solid #ccc', resize: 'vertical' }}
+            />
+          </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              padding: 12,
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: 6,
+              fontSize: 14
+            }}
+          >
+            <strong>Guia docente:</strong> {q.justification || q.explanation || 'No disponible'}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
 
-// Health check component
 function HealthStatus() {
   const [backendStatus, setBackendStatus] = useState('checking')
-  
+
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        console.log('Checking backend at:', `${API_BASE}/api/health`)
         const res = await fetch(`${API_BASE}/api/health`, { method: 'GET' })
-        console.log('Backend response status:', res.status)
-        if (res.ok) {
-          setBackendStatus('online')
-        } else {
-          setBackendStatus('offline')
-        }
-      } catch (e) {
-        console.error('Backend check error:', e)
+        setBackendStatus(res.ok ? 'online' : 'offline')
+      } catch {
         setBackendStatus('offline')
       }
     }
+
     checkBackend()
-    const interval = setInterval(checkBackend, 30000) // Check every 30s
+    const interval = setInterval(checkBackend, 30000)
     return () => clearInterval(interval)
   }, [])
 
   const statusColor = backendStatus === 'online' ? '#4caf50' : backendStatus === 'offline' ? '#f44336' : '#ff9800'
   const statusText = backendStatus === 'online' ? '● API Online' : backendStatus === 'offline' ? '● API Offline' : '● Verificando...'
-  
+
   return (
-    <div style={{ 
-      position: 'fixed', 
-      top: 10, 
-      right: 10, 
-      padding: '6px 12px', 
-      background: statusColor, 
-      color: 'white', 
-      borderRadius: 4, 
-      fontSize: 12,
-      fontWeight: 'bold',
-      zIndex: 1000
-    }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 10,
+        right: 10,
+        padding: '6px 12px',
+        background: statusColor,
+        color: 'white',
+        borderRadius: 4,
+        fontSize: 12,
+        fontWeight: 'bold',
+        zIndex: 1000
+      }}
+    >
       {statusText}
     </div>
   )
 }
 
 const THEMES = [
-  'Familia y dinámicas familiares',
+  'Familia y dinamicas familiares',
   'Infancia y adolescencia',
   'Salud mental',
   'Violencia intrafamiliar',
   'Adulto mayor',
-  'Migración y multiculturalidad',
-  'Reinserción social',
-  'Discapacidad e inclusión',
+  'Migracion y multiculturalidad',
+  'Reinsercion social',
+  'Discapacidad e inclusion',
   'Pobreza y vulnerabilidad social',
   'Adicciones'
 ]
 
 const AGE_GROUPS = [
   { value: '', label: 'Sin especificar (IA decide)' },
-  { value: 'primera_infancia', label: 'Primera Infancia (0-5 años)' },
-  { value: 'niñez', label: 'Niñez (6-12 años)' },
-  { value: 'adolescencia', label: 'Adolescencia (13-17 años)' },
-  { value: 'adultez', label: 'Adultez (18-64 años)' },
-  { value: 'adulto_mayor', label: 'Adulto Mayor (65+ años)' }
+  { value: 'primera_infancia', label: 'Primera Infancia (0-5 anos)' },
+  { value: 'ninez', label: 'Ninez (6-12 anos)' },
+  { value: 'adolescencia', label: 'Adolescencia (13-17 anos)' },
+  { value: 'adultez', label: 'Adultez (18-64 anos)' },
+  { value: 'adulto_mayor', label: 'Adulto Mayor (65+ anos)' }
 ]
 
 const CONTEXTS = [
   { value: '', label: 'Sin especificar (IA decide)' },
-  { value: 'urbano', label: 'Urbano (Coyhaique, Puerto Aysén)' },
+  { value: 'urbano', label: 'Urbano (Coyhaique, Puerto Aysen)' },
   { value: 'rural', label: 'Rural (comunas alejadas)' },
-  { value: 'rural_extremo', label: 'Rural Extremo (máximo aislamiento)' }
+  { value: 'rural_extremo', label: 'Rural Extremo (maximo aislamiento)' }
 ]
 
 const FOCUS_AREAS = [
   { value: '', label: 'Sin especificar (IA decide)' },
   { value: 'derechos_humanos', label: 'Derechos Humanos' },
-  { value: 'enfoque_genero', label: 'Enfoque de Género' },
+  { value: 'enfoque_genero', label: 'Enfoque de Genero' },
   { value: 'determinantes_sociales', label: 'Determinantes Sociales' },
   { value: 'comunitario', label: 'Comunitario/Territorial' },
-  { value: 'sistemico_familiar', label: 'Sistémico Familiar' }
+  { value: 'sistemico_familiar', label: 'Sistemico Familiar' }
 ]
 
 const COMPETENCIES = [
   { value: '', label: 'Sin especificar (IA decide)' },
-  { value: 'diagnostico_social', label: 'Diagnóstico Social' },
-  { value: 'diseño_intervencion', label: 'Diseño de Intervención' },
-  { value: 'articulacion_redes', label: 'Articulación de Redes' },
-  { value: 'entrevista_vinculacion', label: 'Entrevista y Vinculación' },
-  { value: 'evaluacion', label: 'Evaluación de Resultados' }
+  { value: 'diagnostico_social', label: 'Diagnostico Social' },
+  { value: 'diseno_intervencion', label: 'Diseno de Intervencion' },
+  { value: 'articulacion_redes', label: 'Articulacion de Redes' },
+  { value: 'entrevista_vinculacion', label: 'Entrevista y Vinculacion' },
+  { value: 'evaluacion', label: 'Evaluacion de Resultados' }
 ]
 
 const CASE_LENGTHS = [
-  { value: 'corto', label: 'Corto (4 párrafos)' },
-  { value: 'medio', label: 'Medio (5 párrafos)' },
-  { value: 'extenso', label: 'Extenso (6 párrafos)' }
+  { value: 'corto', label: 'Corto (4 parrafos)' },
+  { value: 'medio', label: 'Medio (5 parrafos)' },
+  { value: 'extenso', label: 'Extenso (6 parrafos)' }
 ]
 
-export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAuthenticated, isStudentAuthenticated: propIsStudentAuthenticated, studentData: propStudentData }) {
-  const navigate = useNavigate()
-  
-  // Determinar el tipo de usuario actual
-  const isTeacher = propIsTeacherAuthenticated || localStorage.getItem('teacherAuth') === 'true'
-  const isStudent = propIsStudentAuthenticated || localStorage.getItem('studentAuth') === 'true'
-  
-  // Debug
-  console.log('App render - isTeacher:', isTeacher, 'isStudent:', isStudent)
-  console.log('Props:', { propIsTeacherAuthenticated, propIsStudentAuthenticated })
-  
+export default function App() {
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
   const [ageGroup, setAgeGroup] = useState('')
@@ -247,60 +154,24 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   const [focusArea, setFocusArea] = useState('')
   const [competency, setCompetency] = useState('')
   const [caseLength, setCaseLength] = useState('medio')
+
   const [caseObj, setCaseObj] = useState(null)
-  const [caseDbId, setCaseDbId] = useState(null) // ID del caso en la base de datos
+  const [caseDbId, setCaseDbId] = useState(null)
   const [responseText, setResponseText] = useState('')
   const [loading, setLoading] = useState(false)
-  const [existingCases, setExistingCases] = useState([]) // Casos existentes
-  const [selectedExistingCase, setSelectedExistingCase] = useState(null) // Caso seleccionado
-  const [showExistingCases, setShowExistingCases] = useState(false) // Toggle para mostrar selector
+
+  const [existingCases, setExistingCases] = useState([])
+  const [showExistingCases, setShowExistingCases] = useState(false)
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [openAnswers, setOpenAnswers] = useState({})
-  const [showTeacherPanel, setShowTeacherPanel] = useState(false)
-  const [showLogin, setShowLogin] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(isTeacher)
-  
-  // Student authentication state
-  const [showStudentLogin, setShowStudentLogin] = useState(false)
-  const [isStudentAuthenticated, setIsStudentAuthenticated] = useState(isStudent)
-  const [studentData, setStudentData] = useState(
-    propStudentData || (() => {
-      const saved = localStorage.getItem('studentData')
-      return saved ? JSON.parse(saved) : null
-    })()
-  )
-  const [currentSessionId, setCurrentSessionId] = useState(null)
-  const [submittedAnswers, setSubmittedAnswers] = useState(false)
-  const [selectedAnswers, setSelectedAnswers] = useState({}) // Para almacenar respuestas seleccionadas
-  const [activeTab, setActiveTab] = useState('generate') // 'generate' or 'feedback'
-  const [myFeedback, setMyFeedback] = useState([])
-  const [loadingFeedback, setLoadingFeedback] = useState(false)
-
-  async function loadMyFeedback() {
-    if (!isStudentAuthenticated || !studentData) return
-    
-    setLoadingFeedback(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/answers?student_id=${studentData.id}`)
-      const data = await res.json()
-      if (data.ok) {
-        setMyFeedback(data.sessions || [])
-      }
-    } catch (e) {
-      console.error('Error cargando feedback:', e)
-    } finally {
-      setLoadingFeedback(false)
-    }
-  }
+  const [showCaseOverlay, setShowCaseOverlay] = useState(false)
 
   async function loadExistingCases() {
     try {
       const res = await fetch(`${API_BASE}/api/cases?limit=100&status=active`)
       const data = await res.json()
-      if (data.ok && data.cases) {
-        setExistingCases(data.cases)
-      }
+      if (data.ok && data.cases) setExistingCases(data.cases)
     } catch (e) {
       console.error('Error cargando casos:', e)
     }
@@ -315,6 +186,7 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
         setCaseDbId(caseId)
         setResponseText('')
         setShowExistingCases(false)
+        setShowCaseOverlay(true)
       }
     } catch (e) {
       console.error('Error cargando caso:', e)
@@ -327,30 +199,18 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
     setCaseObj(null)
     setCaseDbId(null)
     setOpenAnswers({})
-    setResponseText('⏳ Generando caso... Esto puede tomar entre 30-60 segundos.')
-    const startTime = Date.now()
-    
+    setResponseText('Generando caso... Esto puede tomar entre 30-60 segundos.')
+
     try {
-      console.log('🚀 Iniciando generación de caso:', { 
-        theme, 
-        difficulty, 
-        ageGroup, 
-        context, 
-        focusArea,
-        competency,
-        caseLength 
-      })
-      console.log('📡 Endpoint:', `${API_BASE}/api/simulate`)
-      
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minutos de timeout
-      
+      const timeoutId = setTimeout(() => controller.abort(), 120000)
+
       const res = await fetch(`${API_BASE}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          generate: true, 
-          theme, 
+        body: JSON.stringify({
+          generate: true,
+          theme,
           difficulty,
           age_group: ageGroup || undefined,
           context: context || undefined,
@@ -360,51 +220,34 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
         }),
         signal: controller.signal
       })
-      
+
       clearTimeout(timeoutId)
-      
-      console.log('📥 Respuesta recibida, status:', res.status)
-      
+
       if (!res.ok) {
         const errorText = await res.text()
         throw new Error(`Error ${res.status}: ${errorText}`)
       }
-      
+
       const data = await res.json()
-      
-      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2)
-      
       if (data.case) {
         setCaseObj(data.case)
-        // Guardar el ID del caso en la DB si fue guardado exitosamente
-        if (data.saved && data.saved.id) {
-          setCaseDbId(data.saved.id)
-          console.log('💾 Caso guardado en DB con ID:', data.saved.id)
-        }
+        setShowCaseOverlay(true)
+        if (data.saved?.id) setCaseDbId(data.saved.id)
         setResponseText('')
-        // Mostrar métricas en consola
-        console.log('✅ Caso generado exitosamente')
-        console.log('📊 Métricas de generación:')
-        console.log(`  ⏱️  Tiempo total: ${totalTime}s`)
-        if (data.metrics) {
-          console.log(`  🤖 API OpenAI: ${data.metrics.api_time}s`)
-          console.log(`  ⚙️  Procesamiento: ${data.metrics.processing_time}s`)
-        }
       } else if (data.text) {
         setResponseText(data.text)
       } else {
         setResponseText(JSON.stringify(data.raw_response || data, null, 2))
       }
-      // If backend returned saved metadata, refresh history
+
       if (data.saved) fetchHistory()
     } catch (e) {
-      console.error('❌ Error en generación:', e)
       if (e.name === 'AbortError') {
-        setResponseText('⚠️ Error: La petición tardó demasiado (más de 2 minutos). \n\nPosibles causas:\n- El backend está procesando demasiado lento\n- Problemas de conexión con OpenAI\n- El servidor está sobrecargado\n\nIntenta de nuevo o contacta al administrador.')
+        setResponseText('Error: la peticion tardo demasiado (mas de 2 minutos).')
       } else if (e.message.includes('Failed to fetch')) {
-        setResponseText(`⚠️ Error de conexión: No se pudo conectar con el backend.\n\nVerifica que:\n- El backend esté ejecutándose (indicador en la esquina superior derecha)\n- Tu conexión a internet esté activa\n- Los puertos 5173 y 8000 estén accesibles\n\nError técnico: ${e.message}`)
+        setResponseText(`Error de conexion con backend: ${e.message}`)
       } else {
-        setResponseText(`❌ Error al generar caso:\n\n${e.message}\n\nSi el problema persiste, verifica:\n- La configuración de OPENAI_API_KEY en el backend\n- Los logs del servidor backend\n- Que no haya problemas de cuota en la API de OpenAI`)
+        setResponseText(`Error al generar caso:\n\n${e.message}`)
       }
     } finally {
       setLoading(false)
@@ -414,16 +257,9 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
   async function fetchHistory() {
     setLoadingHistory(true)
     try {
-      let url = `${API_BASE}/api/cases`
-      // Filtrar por el estudiante logueado
-      if (studentData?.id) {
-        url += `?created_by=${studentData.id}`
-      }
-      const res = await fetch(url)
+      const res = await fetch(`${API_BASE}/api/cases`)
       const data = await res.json()
-      if (data.ok) {
-        setHistory(data.cases || [])
-      }
+      if (data.ok) setHistory(data.cases || [])
     } catch (e) {
       console.error('Error cargando historial', e)
     } finally {
@@ -435,187 +271,158 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
     fetchHistory()
   }, [])
 
-  // Auto-abrir panel de docentes si ya está autenticado
-  useEffect(() => {
-    if (isTeacher && !isStudent) {
-      setShowTeacherPanel(true)
-    }
-  }, [isTeacher, isStudent])
-
-  // Sincronizar con props de ProtectedApp
-  useEffect(() => {
-    if (propIsTeacherAuthenticated) {
-      setIsAuthenticated(true)
-      setShowTeacherPanel(true)
-    }
-    if (propIsStudentAuthenticated && propStudentData) {
-      setIsStudentAuthenticated(true)
-      setStudentData(propStudentData)
-    }
-  }, [propIsTeacherAuthenticated, propIsStudentAuthenticated, propStudentData])
-
-  function handleLoginSuccess() {
-    setIsAuthenticated(true)
-    localStorage.setItem('teacherAuth', 'true')
-    setShowLogin(false)
-    setShowTeacherPanel(true)
-  }
-
-  function handleLogout() {
-    setIsAuthenticated(false)
-    localStorage.removeItem('teacherAuth')
-    setShowTeacherPanel(false)
-    // Llamar al onLogout del padre para limpiar todo el estado y redirigir
-    if (onLogout) {
-      onLogout()
-    }
-  }
-
-  function handleStudentLogin(student) {
-    setIsStudentAuthenticated(true)
-    setStudentData(student)
-    setShowStudentLogin(false)
-  }
-
-  function handleStudentLogout() {
-    setIsStudentAuthenticated(false)
-    setStudentData(null)
-    setCurrentSessionId(null)
-    setSubmittedAnswers(false)
-    localStorage.removeItem('studentAuth')
-    localStorage.removeItem('studentData')
-    localStorage.removeItem('studentToken')
-  }
-
-  async function submitAnswers() {
-    if (!isStudentAuthenticated || !caseObj) {
-      alert('Debes iniciar sesión y generar un caso antes de enviar respuestas')
-      return
-    }
-
-    if (!caseDbId) {
-      alert('⚠️ Error: El caso no se guardó correctamente en la base de datos. Por favor, genera un nuevo caso.')
-      console.error('caseDbId is null - case was not saved to database')
-      return
-    }
-
-    // Preparar array de respuestas en el formato que espera el backend
-    const answers = caseObj.questions.map((q, idx) => {
-      const isOpenEnded = !q.options || q.options.length === 0
-      
-      if (isOpenEnded) {
-        // Pregunta abierta
-        return {
-          question_index: idx,
-          open_answer: openAnswers[idx] || '',
-          selected_option: null
-        }
-      } else {
-        // Pregunta de opción múltiple - usar selectedAnswers que viene del componente
-        const selectedIndex = selectedAnswers[idx] !== undefined ? selectedAnswers[idx] : null
-        
-        return {
-          question_index: idx,
-          selected_option: selectedIndex,
-          open_answer: null
-        }
-      }
-    })
-
-    console.log('📤 Enviando respuestas:', { case_id: caseDbId, answers })
-
-    try {
-      const token = localStorage.getItem('studentToken')
-      const response = await fetch(`${API_BASE}/api/answers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          case_id: caseDbId,
-          answers: answers
-        })
-      })
-
-      const data = await response.json()
-      console.log('📥 Respuesta del servidor:', data)
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || data.detail || 'Error al enviar respuestas')
-      }
-
-      setCurrentSessionId(data.session_id)
-      setSubmittedAnswers(true)
-
-      alert(`✅ Respuestas enviadas correctamente!\n\nTus respuestas han sido registradas y están disponibles para revisión del docente.\n\nSesión ID: ${data.session_id}`)
-    } catch (err) {
-      console.error('Error enviando respuestas:', err)
-      alert('Error al enviar respuestas: ' + err.message)
-    }
-  }
-
-  function attemptOpenPanel() {
-    // Si hay un estudiante logueado, mostrar mensaje de advertencia
-    if (isStudentAuthenticated || isStudent) {
-      alert('⚠️ Para iniciar sesión como docente, primero debes cerrar tu sesión como estudiante.\n\nPor favor, cierra sesión y vuelve a intentarlo.')
-      return
-    }
-    
-    if (isAuthenticated) {
-      setShowTeacherPanel(true)
-    } else {
-      setShowLogin(true)
-    }
-  }
-
   function handleOpenAnswerChange(index, text) {
-    setOpenAnswers(prev => ({ ...prev, [index]: text }))
+    setOpenAnswers((prev) => ({ ...prev, [index]: text }))
+  }
+
+  function formatCaseAsText(caseData) {
+    if (!caseData) return ''
+    const lines = []
+    lines.push(`CASO: ${caseData.title || caseData.case_id || 'Caso generado'}`)
+    lines.push(`Eje: ${caseData.eje || 'No especificado'} | Nivel: ${caseData.nivel || 'No especificado'}`)
+    lines.push('')
+
+    if (caseData.meta) {
+      lines.push('FICHA')
+      lines.push(caseData.meta)
+      lines.push('')
+    }
+
+    lines.push('RELATO')
+    lines.push((caseData.description || caseData.text || '').replace(/\\n/g, '\n'))
+    lines.push('')
+
+    const objectives = caseData.learning_objectives || caseData.checklist || []
+    if (objectives.length > 0) {
+      lines.push('OBJETIVOS DE APRENDIZAJE')
+      objectives.forEach((obj, idx) => lines.push(`${idx + 1}. ${obj}`))
+      lines.push('')
+    }
+
+    const questions = caseData.questions || []
+    if (questions.length > 0) {
+      lines.push('PREGUNTAS ABIERTAS')
+      questions.forEach((q, idx) => {
+        lines.push(`${idx + 1}. ${q.question || q.text || ''}`)
+        if (q.justification || q.explanation) {
+          lines.push(`   Guia docente: ${q.justification || q.explanation}`)
+        }
+      })
+      lines.push('')
+    }
+
+    const interventions = caseData.suggested_interventions || []
+    if (interventions.length > 0) {
+      lines.push('INTERVENCIONES SUGERIDAS')
+      interventions.forEach((it, idx) => lines.push(`${idx + 1}. ${it}`))
+    }
+
+    return lines.join('\n')
+  }
+
+  function escapeHtml(text) {
+    return String(text || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;')
+  }
+
+  function formatCaseAsHtml(caseData) {
+    const title = caseData?.title || caseData?.case_id || 'Caso generado'
+    const objectives = caseData?.learning_objectives || caseData?.checklist || []
+    const questions = caseData?.questions || []
+    const interventions = caseData?.suggested_interventions || []
+
+    return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: 'Source Sans 3', Arial, sans-serif; margin: 32px; color: #182536; line-height: 1.6; }
+    .card { border: 1px solid #d5dde7; border-radius: 12px; overflow: hidden; }
+    .head { background: #1f3a56; color: #fff; padding: 18px 22px; }
+    .head h1 { margin: 0 0 6px; font-size: 24px; }
+    .meta { opacity: .95; font-size: 14px; }
+    .section { padding: 18px 22px; border-top: 1px solid #e2e8f0; }
+    h2 { margin: 0 0 10px; font-size: 18px; color: #1f3a56; }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin-bottom: 8px; }
+    .question { margin-bottom: 14px; }
+    .guide { color: #4b5563; font-size: 14px; margin-top: 4px; }
+    .study { margin: 18px 0 0; padding: 12px; border: 1px solid #b8c4d2; border-radius: 8px; background: #f7f9fc; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <h1>${escapeHtml(title)}</h1>
+      <div class="meta">Eje: ${escapeHtml(caseData?.eje || 'No especificado')} | Nivel: ${escapeHtml(caseData?.nivel || 'No especificado')}</div>
+    </div>
+    <div class="section">
+      <h2>Ficha</h2>
+      <p>${escapeHtml(caseData?.meta || 'Sin ficha disponible')}</p>
+    </div>
+    <div class="section">
+      <h2>Relato del caso</h2>
+      <p>${escapeHtml((caseData?.description || caseData?.text || '').replace(/\\n/g, '\n')).replaceAll('\n', '<br/>')}</p>
+    </div>
+    ${objectives.length ? `<div class="section"><h2>Objetivos de aprendizaje</h2><ul>${objectives.map((o) => `<li>${escapeHtml(o)}</li>`).join('')}</ul></div>` : ''}
+    ${questions.length ? `<div class="section"><h2>Preguntas abiertas</h2>${questions.map((q, idx) => `<div class="question"><strong>${idx + 1}. ${escapeHtml(q.question || q.text || '')}</strong><div class="guide">Guia docente: ${escapeHtml(q.justification || q.explanation || 'No disponible')}</div></div>`).join('')}</div>` : ''}
+    ${interventions.length ? `<div class="section"><h2>Intervenciones sugeridas</h2><ul>${interventions.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul></div>` : ''}
+  </div>
+  <div class="study">Material pedagogico: las respuestas se trabajan localmente y no se envian al servidor.</div>
+</body>
+</html>`
+  }
+
+  async function copyCaseOutput() {
+    if (!caseObj) return
+    try {
+      await navigator.clipboard.writeText(formatCaseAsText(caseObj))
+      alert('Salida del caso copiada al portapapeles.')
+    } catch {
+      alert('No se pudo copiar automaticamente. Intenta nuevamente.')
+    }
+  }
+
+  function downloadCaseHtml() {
+    if (!caseObj) return
+    const html = formatCaseAsHtml(caseObj)
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${(caseObj.title || caseObj.case_id || 'caso').replace(/[^a-zA-Z0-9-_]+/g, '_')}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   return (
     <>
       <HealthStatus />
-      {showLogin && (
-        <LoginModal 
-          onLogin={handleLoginSuccess}
-          onCancel={() => setShowLogin(false)}
-        />
-      )}
-      {showStudentLogin && (
-        <StudentLoginModal
-          onLogin={handleStudentLogin}
-          onCancel={() => setShowStudentLogin(false)}
-        />
-      )}
-      
-      {/* Si es docente autenticado, mostrar solo el panel docente */}
-      {isTeacher && !isStudent ? (
-        <TeacherPanel 
-          onClose={() => {}}
-          onLogout={handleLogout}
-          openAnswers={{}}
-          activeCase={null}
-        />
-      ) : (
-        /* Interfaz de estudiante */
-        <>
+
       <header className="app-header">
         <div className="header-content">
-          <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => navigate('/')}>
-            <img 
-              src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png" 
-              alt="Logo Trabajo Social" 
+          <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <img
+              src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png"
+              alt="Logo Trabajo Social"
               className="header-logo"
             />
             <div className="header-text">
-              <h1>Simulador de Casos </h1>
-              <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysén</p>
+              <h1>Simulador de Casos</h1>
+              <p className="header-subtitle">Carrera de Trabajo Social - Universidad de Aysen</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className="header-actions">
             <button
-              onClick={() => onLogout && onLogout()}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               style={{
                 padding: '0.5rem 1rem',
                 border: 'none',
@@ -627,599 +434,310 @@ export default function App({ onLogout, isTeacherAuthenticated: propIsTeacherAut
                 marginRight: '0.5rem'
               }}
             >
-              ← Ir a Inicio
+              Ir arriba
             </button>
-            {isStudentAuthenticated ? (
-              <>
-                <span style={{ fontSize: '0.9rem', color: '#666' }}>
-                  👤 {studentData?.name || studentData?.username}
-                </span>
-                <button 
-                  onClick={handleStudentLogout}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    border: 'none',
-                    borderRadius: '4px',
-                    backgroundColor: '#f44336',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem'
-                  }}
-                >
-                  Cerrar Sesión
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => setShowStudentLogin(true)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem'
-                }}
-              >
-                Iniciar Sesión Estudiante
-              </button>
-            )}
+            <span className="header-pill">Modo pedagogico activo</span>
           </div>
         </div>
       </header>
 
-      {/* Tabs de navegación para estudiantes */}
-      {isStudentAuthenticated && (
-        <div style={{
-          backgroundColor: 'white',
-          borderBottom: '2px solid #e0e0e0',
-          padding: '0 2rem'
-        }}>
-          <div style={{
-            maxWidth: '1400px',
-            margin: '0 auto',
-            display: 'flex',
-            gap: '2rem'
-          }}>
-            <button
-              onClick={() => setActiveTab('generate')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'none',
-                color: activeTab === 'generate' ? '#003d6b' : '#666',
-                borderBottom: activeTab === 'generate' ? '3px solid #003d6b' : '3px solid transparent',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: activeTab === 'generate' ? '600' : '400',
-                transition: 'all 0.2s'
-              }}
-            >
-              📝 Generar Casos
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('feedback')
-                loadMyFeedback()
-              }}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'none',
-                color: activeTab === 'feedback' ? '#003d6b' : '#666',
-                borderBottom: activeTab === 'feedback' ? '3px solid #003d6b' : '3px solid transparent',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: activeTab === 'feedback' ? '600' : '400',
-                transition: 'all 0.2s'
-              }}
-            >
-              💬 Mi Feedback
-            </button>
+      <section className="study-intro">
+        <div className="study-intro-content">
+          <div>
+            <p className="study-kicker">Uso pedagogico</p>
+            <h2 className="study-title">Este simulador es material de estudio y apoyo docente</h2>
+            <p className="study-description">
+              Los casos se generan para analisis, discusion en clases y practica de razonamiento profesional.
+              Las respuestas que escribas son de trabajo local y no se envian al servidor.
+            </p>
+          </div>
+          <div className="study-points">
+            <div className="study-point">Casos contextualizados con objetivos de aprendizaje</div>
+            <div className="study-point">Preguntas abiertas para analisis critico</div>
+            <div className="study-point">Util para trabajo individual o grupal en aula</div>
           </div>
         </div>
-      )}
+      </section>
 
       <div className="container layout">
         <div className="main">
+          <div className="config-panel">
+            <h2 className="section-title">Configuracion del Caso</h2>
 
-      {activeTab === 'generate' ? (
-        <>
-      <div className="config-panel">
-        <h2 className="section-title">Configuración del Caso</h2>
-        
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-          <button className="btn-primary" onClick={generateCase} disabled={loading}>
-            {loading ? '⏳ Generando...' : '✨ Generar Caso Nuevo'}
-          </button>
-          <button 
-            className="btn-secondary" 
-            onClick={() => {
-              setShowExistingCases(!showExistingCases)
-              if (!showExistingCases && existingCases.length === 0) {
-                loadExistingCases()
-              }
-            }}
-          >
-            📚 Seleccionar Caso Existente
-          </button>
-        </div>
-
-        {showExistingCases && (
-          <div style={{
-            marginBottom: '1.5rem',
-            padding: '1rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            border: '2px solid #17a2b8'
-          }}>
-            <h4 style={{ marginTop: 0, color: '#003d6b' }}>📚 Casos Disponibles</h4>
-            {existingCases.length === 0 ? (
-              <p style={{ color: '#666' }}>No hay casos disponibles</p>
-            ) : (
-              <div style={{ 
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-                gap: '0.75rem'
-              }}>
-                {existingCases.slice(0, 20).map(c => (
-                  <div 
-                    key={c.id}
-                    onClick={() => selectExistingCase(c.id)}
-                    style={{
-                      padding: '1rem',
-                      backgroundColor: 'white',
-                      border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)'
-                      e.currentTarget.style.transform = 'translateY(-2px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = 'none'
-                      e.currentTarget.style.transform = 'translateY(0)'
-                    }}
-                  >
-                    <strong style={{ color: '#003d6b', display: 'block', marginBottom: '0.5rem' }}>
-                      {c.title?.substring(0, 50) || `Caso ${c.id}`}
-                    </strong>
-                    <span style={{ fontSize: '0.85rem', color: '#666' }}>
-                      {c.theme} • {c.difficulty}
-                    </span>
+            {showExistingCases && (
+              <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '2px solid #17a2b8' }}>
+                <h4 style={{ marginTop: 0, color: '#003d6b' }}>Casos disponibles</h4>
+                {existingCases.length === 0 ? (
+                  <p style={{ color: '#666' }}>No hay casos disponibles</p>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '0.75rem' }}>
+                    {existingCases.slice(0, 20).map((c) => (
+                      <div
+                        key={c.id}
+                        onClick={() => selectExistingCase(c.id)}
+                        style={{ padding: '1rem', backgroundColor: 'white', border: '1px solid #ddd', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.3s ease' }}
+                      >
+                        <strong style={{ color: '#003d6b', display: 'block', marginBottom: '0.5rem' }}>
+                          {c.title?.substring(0, 50) || `Caso ${c.id}`}
+                        </strong>
+                        <span style={{ fontSize: '0.85rem', color: '#666' }}>{c.theme} • {c.difficulty}</span>
+                      </div>
+                    ))}
                   </div>
+                )}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label">Tematica</label>
+              <select className="form-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
+                {THEMES.map((t) => (
+                  <option value={t} key={t}>{t}</option>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-        
-        <div className="form-group">\n
-          <label className="form-label">Temática</label>
-          <select className="form-select" value={theme} onChange={(e) => setTheme(e.target.value)}>
-            {THEMES.map((t) => (
-              <option value={t} key={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Nivel de dificultad</label>
-          <div className="radio-group">
-            <label className="radio-label" title="Casos simples con situaciones directas y respuestas claras. Ideal para familiarizarse con la metodología.">
-              <input type="radio" name="difficulty" value="basico" checked={difficulty === 'basico'} onChange={() => setDifficulty('basico')} />
-              <span>Básico ℹ️</span>
-            </label>
-            <label className="radio-label" title="Casos con mayor complejidad, variables múltiples y situaciones que requieren análisis más profundo.">
-              <input type="radio" name="difficulty" value="intermedio" checked={difficulty === 'intermedio'} onChange={() => setDifficulty('intermedio')} />
-              <span>Intermedio ℹ️</span>
-            </label>
-            <label className="radio-label" title="Casos complejos con múltiples actores, factores de riesgo entrelazados y dilemas éticos. Requiere pensamiento crítico avanzado.">
-              <input type="radio" name="difficulty" value="avanzado" checked={difficulty === 'avanzado'} onChange={() => setDifficulty('avanzado')} />
-              <span>Avanzado ℹ️</span>
-            </label>
-          </div>
-        </div>
-
-        {/* NUEVOS SELECTORES AGREGADOS */}
-        <div className="form-group">
-          <label className="form-label">
-            Grupo Etario
-            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
-          </label>
-          <select className="form-select" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
-            {AGE_GROUPS.map((g) => (
-              <option value={g.value} key={g.value}>{g.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">
-            Contexto Territorial
-            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
-          </label>
-          <select className="form-select" value={context} onChange={(e) => setContext(e.target.value)}>
-            {CONTEXTS.map((c) => (
-              <option value={c.value} key={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">
-            Enfoque Principal
-            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
-          </label>
-          <select className="form-select" value={focusArea} onChange={(e) => setFocusArea(e.target.value)}>
-            {FOCUS_AREAS.map((f) => (
-              <option value={f.value} key={f.value}>{f.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">
-            Competencia Objetivo
-            <span style={{fontSize: '0.85em', color: '#666', marginLeft: 6}}>(opcional)</span>
-          </label>
-          <select className="form-select" value={competency} onChange={(e) => setCompetency(e.target.value)}>
-            {COMPETENCIES.map((comp) => (
-              <option value={comp.value} key={comp.value}>{comp.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Extensión del Caso</label>
-          <select className="form-select" value={caseLength} onChange={(e) => setCaseLength(e.target.value)}>
-            {CASE_LENGTHS.map((l) => (
-              <option value={l.value} key={l.value}>{l.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="results-section">
-        <h2 className="section-title">Caso Generado</h2>
-        {caseObj ? (
-          <div className="case">
-            <div className="case-header">
-              <h3 className="case-title">{caseObj.title || caseObj.case_id || caseObj.eje || 'Caso generado'}</h3>
-              <div className="case-meta">
-                {caseObj.eje && <span className="badge badge-theme">{caseObj.eje}</span>}
-                {caseObj.nivel && <span className="badge badge-level">{caseObj.nivel}</span>}
-                {caseObj.grupoEtario && <span className="badge badge-info">{caseObj.grupoEtario}</span>}
-                {caseObj.tipoTerritorio && <span className="badge badge-info">{caseObj.tipoTerritorio}</span>}
-              </div>
+              </select>
             </div>
-            
-            {caseObj.meta && (
-              <div className="case-info">
-                <strong>📋 Ficha:</strong> {caseObj.meta}
-              </div>
-            )}
-            
-            <div className="case-description">
-              <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8' }}>
-                {(caseObj.description || caseObj.text)?.replace(/\\n/g, '\n')}
+
+            <div className="form-group">
+              <label className="form-label">Nivel de dificultad</label>
+              <div className="radio-group">
+                <label className="radio-label">
+                  <input type="radio" name="difficulty" value="basico" checked={difficulty === 'basico'} onChange={() => setDifficulty('basico')} />
+                  <span>Basico</span>
+                </label>
+                <label className="radio-label">
+                  <input type="radio" name="difficulty" value="intermedio" checked={difficulty === 'intermedio'} onChange={() => setDifficulty('intermedio')} />
+                  <span>Intermedio</span>
+                </label>
+                <label className="radio-label">
+                  <input type="radio" name="difficulty" value="avanzado" checked={difficulty === 'avanzado'} onChange={() => setDifficulty('avanzado')} />
+                  <span>Avanzado</span>
+                </label>
               </div>
             </div>
 
-          {/* Objetivos / checklist */}
-          {(caseObj.learning_objectives || caseObj.checklist) && (
-            <div className="case-section">
-              <h4 className="case-section-title">🎯 Objetivos de Aprendizaje</h4>
-              <ul className="objectives-list">
-                {(caseObj.learning_objectives || caseObj.checklist).map((o, i) => <li key={i}>{o}</li>)}
-              </ul>
+            <div className="form-group">
+              <label className="form-label">Grupo Etario (opcional)</label>
+              <select className="form-select" value={ageGroup} onChange={(e) => setAgeGroup(e.target.value)}>
+                {AGE_GROUPS.map((g) => (
+                  <option value={g.value} key={g.value}>{g.label}</option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {/* Preguntas interactivas */}
-          {caseObj.questions && (
-            <>
-              <div data-questions-list>
-                <QuestionsList 
-                  questions={caseObj.questions}
-                  openAnswers={openAnswers}
-                  onOpenAnswerChange={handleOpenAnswerChange}
-                  onAnswersChange={setSelectedAnswers}
-                />
-              </div>
-              
-              {isStudentAuthenticated && !submittedAnswers && (
-                <div style={{ marginTop: '2rem', textAlign: 'center' }}>
-                  <button
-                    onClick={submitAnswers}
-                    style={{
-                      padding: '1rem 2rem',
-                      fontSize: '1.1rem',
-                      backgroundColor: '#4CAF50',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                  >
-                    📤 Enviar Respuestas
-                  </button>
-                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                    Asegúrate de responder todas las preguntas antes de enviar
-                  </p>
-                </div>
-              )}
-
-              {submittedAnswers && currentSessionId && (
-                <div style={{
-                  marginTop: '2rem',
-                  padding: '1.5rem',
-                  backgroundColor: '#e8f5e9',
-                  border: '2px solid #4CAF50',
-                  borderRadius: '8px',
-                  textAlign: 'center'
-                }}>
-                  <h3 style={{ margin: '0 0 0.5rem 0', color: '#2e7d32' }}>
-                    ✅ Respuestas enviadas correctamente
-                  </h3>
-                  <p style={{ margin: 0, color: '#666' }}>
-                    Sesión ID: {currentSessionId}
-                  </p>
-                  <p style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                    Tu docente podrá revisar y calificar tus respuestas
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-          
-          {/* Fallback para formato antiguo */}
-          {caseObj.suggested_questions && !caseObj.questions && (
-            <div className="case-section">
-              <h4 className="case-section-title">❓ Preguntas para Reflexionar</h4>
-              <ul className="questions-list">
-                {caseObj.suggested_questions.map((q, i) => <li key={i}>{q}</li>)}
-              </ul>
+            <div className="form-group">
+              <label className="form-label">Contexto Territorial (opcional)</label>
+              <select className="form-select" value={context} onChange={(e) => setContext(e.target.value)}>
+                {CONTEXTS.map((c) => (
+                  <option value={c.value} key={c.value}>{c.label}</option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {caseObj.suggested_interventions && (
-            <div className="case-section">
-              <h4 className="case-section-title">💡 Intervenciones Sugeridas</h4>
-              <ul className="interventions-list">
-                {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
-              </ul>
+            <div className="form-group">
+              <label className="form-label">Enfoque Principal (opcional)</label>
+              <select className="form-select" value={focusArea} onChange={(e) => setFocusArea(e.target.value)}>
+                {FOCUS_AREAS.map((f) => (
+                  <option value={f.value} key={f.value}>{f.label}</option>
+                ))}
+              </select>
             </div>
-          )}
-        </div>
-        ) : (
-          <div className="empty-state">
-            {responseText ? (
-              <pre className="response">{responseText}</pre>
-            ) : (
-              <p className="empty-message">👆 Configura los parámetros y genera un caso para comenzar</p>
-            )}
-          </div>
-        )}
-      </div>
-      </>
-      ) : (
-        /* Vista de Feedback del Estudiante */
-        <div style={{ padding: '2rem' }}>
-          <h2 style={{ marginBottom: '1.5rem', color: '#003d6b' }}>💬 Mi Feedback de Casos Resueltos</h2>
-          
-          {loadingFeedback ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#666' }}>
-              Cargando feedback...
+
+            <div className="form-group">
+              <label className="form-label">Competencia Objetivo (opcional)</label>
+              <select className="form-select" value={competency} onChange={(e) => setCompetency(e.target.value)}>
+                {COMPETENCIES.map((c) => (
+                  <option value={c.value} key={c.value}>{c.label}</option>
+                ))}
+              </select>
             </div>
-          ) : myFeedback.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: '#666', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-              <p style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>📭 No tienes casos resueltos aún</p>
-              <p>Resuelve algunos casos y vuelve aquí para ver el feedback de tu docente</p>
-              <button 
-                onClick={() => setActiveTab('generate')}
-                style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: '#003d6b',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
-              >
-                Ir a Generar Casos
-              </button>
+
+            <div className="form-group">
+              <label className="form-label">Extension del Caso</label>
+              <select className="form-select" value={caseLength} onChange={(e) => setCaseLength(e.target.value)}>
+                {CASE_LENGTHS.map((l) => (
+                  <option value={l.value} key={l.value}>{l.label}</option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '1.5rem' }}>
-              {myFeedback.map((session) => (
-                <div key={session.session_id} style={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '8px',
-                  padding: '1.5rem',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    marginBottom: '1rem',
-                    paddingBottom: '1rem',
-                    borderBottom: '1px solid #e0e0e0'
-                  }}>
-                    <div>
-                      <h3 style={{ color: '#003d6b', marginBottom: '0.5rem' }}>
-                        {session.case_title || `Caso ${session.case_id}`}
-                      </h3>
-                      <p style={{ fontSize: '0.9rem', color: '#666', margin: 0 }}>
-                        📅 {new Date(session.submitted_at).toLocaleDateString('es-CL', { 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </p>
-                    </div>
-                    <span style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: '#e3f2fd',
-                      color: '#1976d2',
-                      borderRadius: '20px',
-                      fontSize: '0.85rem',
-                      fontWeight: '600'
-                    }}>
-                      {session.answers?.length || 0} respuestas
-                    </span>
-                  </div>
 
-                  {session.answers && session.answers.length > 0 ? (
-                    <div style={{ display: 'grid', gap: '1rem' }}>
-                      {session.answers.map((answer, idx) => (
-                        <div key={answer.id} style={{
-                          padding: '1rem',
-                          backgroundColor: '#f8f9fa',
-                          borderRadius: '6px',
-                          borderLeft: answer.feedback ? '4px solid #4caf50' : '4px solid #e0e0e0'
-                        }}>
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <strong style={{ color: '#333' }}>Pregunta {idx + 1}:</strong>
-                            <p style={{ margin: '0.5rem 0', color: '#555' }}>{answer.question_text}</p>
-                          </div>
-
-                          <div style={{ marginBottom: '0.75rem' }}>
-                            <strong style={{ fontSize: '0.9rem', color: '#666' }}>Tu respuesta:</strong>
-                            <p style={{ 
-                              margin: '0.5rem 0', 
-                              color: '#333',
-                              backgroundColor: 'white',
-                              padding: '0.75rem',
-                              borderRadius: '4px'
-                            }}>
-                              {answer.student_answer || 'Sin respuesta'}
-                              {answer.answer_type === 'multiple_choice' && answer.is_correct !== null && (
-                                <span style={{ 
-                                  marginLeft: '0.75rem',
-                                  fontWeight: 'bold',
-                                  color: answer.is_correct ? '#4caf50' : '#f44336'
-                                }}>
-                                  {answer.is_correct ? '✓ Correcta' : '✗ Incorrecta'}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-
-                          {answer.feedback ? (
-                            <div style={{
-                              marginTop: '1rem',
-                              padding: '1rem',
-                              backgroundColor: 'white',
-                              borderRadius: '4px',
-                              border: '1px solid #4caf50'
-                            }}>
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '0.5rem',
-                                marginBottom: '0.5rem'
-                              }}>
-                                <span style={{ fontSize: '1.2rem' }}>👨‍🏫</span>
-                                <strong style={{ color: '#4caf50' }}>Feedback del Docente:</strong>
-                              </div>
-                              <p style={{ 
-                                margin: 0, 
-                                color: '#333',
-                                lineHeight: '1.6',
-                                whiteSpace: 'pre-wrap'
-                              }}>
-                                {answer.feedback}
-                              </p>
-                            </div>
-                          ) : (
-                            <div style={{
-                              marginTop: '1rem',
-                              padding: '0.75rem',
-                              backgroundColor: '#fff3cd',
-                              borderRadius: '4px',
-                              border: '1px solid #ffc107',
-                              fontSize: '0.9rem',
-                              color: '#856404'
-                            }}>
-                              ⏳ Esperando feedback del docente
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ color: '#666', fontStyle: 'italic' }}>No hay respuestas registradas para esta sesión</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-      </div>
-
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2 className="sidebar-title">📚 Historial</h2>
-          <button className="btn-secondary" onClick={fetchHistory} disabled={loadingHistory}>
-            {loadingHistory ? '⏳' : '🔄'}
-          </button>
-        </div>
-        {loadingHistory ? (
-          <div className="loading-state">Cargando...</div>
-        ) : (
-          <ul className="history-list">
-            {history.length === 0 && <li className="empty-history">No hay casos guardados</li>}
-            {history.map((c) => (
-              <li key={c.id} className="history-item">
-                <div className="history-title">{c.title || c.case_id}</div>
-                <div className="history-meta">
-                  {c.theme && <span className="history-tag">{c.theme}</span>}
-                  {c.difficulty && <span className="history-tag">{c.difficulty}</span>}
-                </div>
-                <button 
-                  className="btn-load" 
-                  onClick={() => { 
-                    setCaseObj(c.payload); 
-                    setCaseDbId(c.id); // Guardar el ID de la DB
-                    setSubmittedAnswers(false); // Reset del estado de envío
-                    window.scrollTo({ top: 0, behavior: 'smooth' }) 
+            <div className="config-actions-sticky">
+              <p className="config-actions-hint">Cuando termines de configurar, genera el caso directamente desde aqui.</p>
+              <div className="config-actions-row">
+                <button className="btn-primary" onClick={generateCase} disabled={loading}>
+                  {loading ? 'Generando...' : 'Generar Caso Nuevo'}
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    setShowExistingCases(!showExistingCases)
+                    if (!showExistingCases && existingCases.length === 0) loadExistingCases()
                   }}
                 >
-                  Ver caso
+                  Seleccionar Caso Existente
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </aside>
+              </div>
+            </div>
+          </div>
+
+          <div className="results-section">
+            <div className="results-header">
+              <h2 className="section-title">Caso Generado</h2>
+              {caseObj && (
+                <div className="results-actions">
+                  <button className="btn-secondary" onClick={() => setShowCaseOverlay(true)}>Vista enfocada</button>
+                  <button className="btn-secondary" onClick={copyCaseOutput}>Copiar salida</button>
+                  <button className="btn-secondary" onClick={downloadCaseHtml}>Descargar HTML</button>
+                </div>
+              )}
+            </div>
+
+            {caseObj ? (
+              <div className="case">
+                <div className="case-header">
+                  <h3 className="case-title">{caseObj.title || caseObj.case_id || caseObj.eje || 'Caso generado'}</h3>
+                  <div className="case-meta">
+                    {caseObj.eje && <span className="badge badge-theme">{caseObj.eje}</span>}
+                    {caseObj.nivel && <span className="badge badge-level">{caseObj.nivel}</span>}
+                    {caseObj.grupoEtario && <span className="badge badge-info">{caseObj.grupoEtario}</span>}
+                    {caseObj.tipoTerritorio && <span className="badge badge-info">{caseObj.tipoTerritorio}</span>}
+                  </div>
+                </div>
+
+                {caseObj.meta && <div className="case-info"><strong>Ficha:</strong> {caseObj.meta}</div>}
+
+                <div className="case-description">
+                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8' }}>
+                    {(caseObj.description || caseObj.text)?.replace(/\\n/g, '\n')}
+                  </div>
+                </div>
+
+                {(caseObj.learning_objectives || caseObj.checklist) && (
+                  <div className="case-section">
+                    <h4 className="case-section-title">Objetivos de Aprendizaje</h4>
+                    <ul className="objectives-list">
+                      {(caseObj.learning_objectives || caseObj.checklist).map((o, i) => <li key={i}>{o}</li>)}
+                    </ul>
+                  </div>
+                )}
+
+                {caseObj.questions && (
+                  <>
+                    <div data-questions-list>
+                      <QuestionsList questions={caseObj.questions} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
+                    </div>
+                    <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', backgroundColor: '#eef7ff', border: '1px solid #b6d8ff', color: '#003d6b' }}>
+                      Este simulador funciona como material de estudio y apoyo docente. Las respuestas se trabajan localmente y no se envian al servidor.
+                    </div>
+                  </>
+                )}
+
+                {caseObj.suggested_interventions && (
+                  <div className="case-section">
+                    <h4 className="case-section-title">Intervenciones Sugeridas</h4>
+                    <ul className="interventions-list">
+                      {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="empty-state">
+                {responseText ? <pre className="response">{responseText}</pre> : <p className="empty-message">Configura los parametros y genera un caso para comenzar</p>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <h2 className="sidebar-title">Historial</h2>
+            <button className="btn-secondary" onClick={fetchHistory} disabled={loadingHistory}>
+              {loadingHistory ? '...' : 'Actualizar'}
+            </button>
+          </div>
+          {loadingHistory ? (
+            <div className="loading-state">Cargando...</div>
+          ) : (
+            <ul className="history-list">
+              {history.length === 0 && <li className="empty-history">No hay casos guardados</li>}
+              {history.map((c) => (
+                <li key={c.id} className="history-item">
+                  <div className="history-title">{c.title || c.case_id}</div>
+                  <div className="history-meta">
+                    {c.theme && <span className="history-tag">{c.theme}</span>}
+                    {c.difficulty && <span className="history-tag">{c.difficulty}</span>}
+                  </div>
+                  <button
+                    className="btn-load"
+                    onClick={() => {
+                      setCaseObj(c.payload)
+                      setCaseDbId(c.id)
+                      setShowCaseOverlay(true)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                  >
+                    Ver caso
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
       </div>
-      
-      {/* Botón flotante para acceso docente */}
-      {!isAuthenticated && (
-        <button 
-          className="btn-teacher-access"
-          onClick={attemptOpenPanel}
-          title={isStudentAuthenticated || isStudent ? "Cierra sesión como estudiante para acceder al panel docente" : "Acceso panel de docentes"}
-          style={{
-            opacity: (isStudentAuthenticated || isStudent) ? 0.6 : 1,
-            cursor: 'pointer'
-          }}
-        >
-          🎓 Panel Docente
-        </button>
-      )}
-      </>
+
+      {showCaseOverlay && caseObj && (
+        <div className="case-overlay-backdrop" onClick={() => setShowCaseOverlay(false)}>
+          <div className="case-overlay-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="case-overlay-toolbar">
+              <div>
+                <strong>Vista docente enfocada</strong>
+                <div className="case-overlay-subtitle">Visualizacion completa del caso para trabajo pedagogico</div>
+              </div>
+              <div className="case-overlay-actions">
+                <button className="btn-secondary" onClick={copyCaseOutput}>Copiar</button>
+                <button className="btn-secondary" onClick={downloadCaseHtml}>HTML</button>
+                <button className="btn-secondary" onClick={() => setShowCaseOverlay(false)}>Cerrar</button>
+              </div>
+            </div>
+
+            <div className="case-overlay-content">
+              <div className="case">
+                <div className="case-header">
+                  <h3 className="case-title">{caseObj.title || caseObj.case_id || caseObj.eje || 'Caso generado'}</h3>
+                  <div className="case-meta">
+                    {caseObj.eje && <span className="badge badge-theme">{caseObj.eje}</span>}
+                    {caseObj.nivel && <span className="badge badge-level">{caseObj.nivel}</span>}
+                  </div>
+                </div>
+                {caseObj.meta && <div className="case-info"><strong>Ficha:</strong> {caseObj.meta}</div>}
+                <div className="case-description">
+                  <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.8' }}>{(caseObj.description || caseObj.text)?.replace(/\\n/g, '\n')}</div>
+                </div>
+                {(caseObj.learning_objectives || caseObj.checklist) && (
+                  <div className="case-section">
+                    <h4 className="case-section-title">Objetivos de Aprendizaje</h4>
+                    <ul className="objectives-list">
+                      {(caseObj.learning_objectives || caseObj.checklist).map((o, i) => <li key={i}>{o}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {caseObj.questions && (
+                  <div className="case-section">
+                    <QuestionsList questions={caseObj.questions} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
+                  </div>
+                )}
+                {caseObj.suggested_interventions && (
+                  <div className="case-section">
+                    <h4 className="case-section-title">Intervenciones Sugeridas</h4>
+                    <ul className="interventions-list">
+                      {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

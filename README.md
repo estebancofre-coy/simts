@@ -1,190 +1,89 @@
-# simts
+# SimTS
 
-Simulador de casos de Trabajo Social — backend (FastAPI) + frontend (React/Vite).
+SimTS es un simulador pedagogico para la carrera de Trabajo Social.
+Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis docente/estudiantil.
 
-## Quickstart (desarrollo)
+## Alcance actual
 
-Requisitos: Python 3.11+, Node 18+, bash. Configura tu `OPENAI_API_KEY` en `backend/.env` si vas a generar casos reales.
+- Generacion de casos con IA (Gemini por defecto; OpenAI opcional como fallback tecnico).
+- Modo de uso pedagogico: no requiere login para el flujo principal.
+- Preguntas abiertas para reflexion y discusion.
+- Exportacion del caso en formato copiable y descargable en HTML.
+- Historial de casos generados y guardados.
 
-```bash
-# 1) Prueba rápida end-to-end (levanta servicios y verifica)
-bash scripts/smoke.sh
+## Arquitectura
 
-# 2) Abrir manualmente
-"$BROWSER" http://localhost:5173
-"$BROWSER" http://localhost:8000/docs
+- Frontend: React + Vite.
+- Backend: FastAPI.
+- Persistencia: SQLite.
 
-# 3) Detener servicios
-bash scripts/stop.sh
-```
+## Estructura relevante
 
-## Arranque manual (alternativa)
+- frontend/src/main.jsx: entrada de la app.
+- frontend/src/App.jsx: simulador principal UX docente.
+- frontend/src/styles.css: sistema visual y layout.
+- backend/main.py: endpoints API y generacion con IA.
+- backend/db.py: capa de datos SQLite.
 
-```bash
-# Backend
+## Variables de entorno backend
+
+Crear backend/.env con:
+
+GEMINI_API_KEY=tu-api-key
+SIMTS_LLM_PROVIDER=gemini
+GEMINI_MODEL=gemini-3-flash-preview
+
+Opcional fallback:
+
+OPENAI_API_KEY=tu-api-key-openai
+SIMTS_LLM_PROVIDER=openai
+
+## Ejecucion local
+
+Backend:
+
 cd backend
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-nohup uvicorn main:app --host 0.0.0.0 --port 8000 --reload > uvicorn.log 2>&1 & echo $! > uvicorn.pid
-cd ..
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
-# Frontend
+Frontend:
+
 cd frontend
 npm install
-nohup npm run dev -- --host 0.0.0.0 > ../frontend.log 2>&1 & echo $! > ../frontend.pid
-cd ..
+npm run dev -- --host 0.0.0.0
 
-# Verificar
-curl -I http://localhost:5173
-curl -I http://localhost:8000/docs
-```
+URLs:
+
+- Frontend: http://localhost:5173
+- API health: http://localhost:8000/api/health
+- API docs: http://localhost:8000/docs
+
+## API principal
+
+- GET /api/health
+- POST /api/simulate
+- GET /api/cases
+- GET /api/cases/{id}
+- POST /api/cases
+- PUT /api/cases/{id}
+- DELETE /api/cases/{id}
+
+## Flujo recomendado docente
+
+1. Configurar parametros del caso.
+2. Generar caso nuevo o abrir uno del historial.
+3. Trabajar en vista enfocada de tarjeta grande.
+4. Copiar salida o descargar HTML para clase y material.
+
+## Scripts utiles
+
+- bash scripts/smoke.sh
+- bash scripts/stop.sh
+- bash scripts/deploy_help.sh
 
 ## Notas
-- En desarrollo, accede a la UI por `http://localhost:5173` (Vite sirve `index.html`).
-- La API corre en `http://localhost:8000` y el frontend proxyea `/api/*` en dev.
-- Logs útiles: `backend/uvicorn.log` y `frontend.log` (en raíz).
 
-## 🔧 Troubleshooting
-
-Si tienes problemas de accesibilidad o conectividad:
-
-```bash
-# Ejecutar diagnóstico completo
-./scripts/check_frontend.sh
-
-# Verificar estado de servicios
-ps aux | grep -E "(vite|uvicorn)" | grep -v grep
-netstat -tlnp | grep -E "(5173|8000)"
-```
-
-**Problemas comunes:**
-- **Frontend no accesible**: Verifica que el servidor Vite esté ejecutándose con `npm run dev`
-- **Backend no responde**: Verifica el health check con `curl http://localhost:8000/api/health`
-- **JavaScript no carga**: Asegúrate que JavaScript esté habilitado en el navegador
-- **CORS errors**: Las llamadas al API deben usar `/api/...` (proxy) no `http://localhost:8000/api/...`
-
-Para más detalles, consulta [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
-
-## 🌐 Acceso en Entornos Remotos
-
-**GitHub Codespaces / VS Code Dev Containers:**
-1. Los puertos se forwarded automáticamente
-2. Ve a la pestaña "PORTS" en VS Code
-3. Verifica que 5173 y 8000 estén listados
-4. Click en "Open in Browser" (🌐) junto al puerto 5173
-5. El indicador "● API Online/Offline" en la esquina superior derecha muestra el estado del backend
-
-## 🚀 Deploy en Producción
-
-Para desplegar la aplicación en producción, consulta la guía completa:
-
-```bash
-# Ver guía interactiva
-./scripts/deploy_help.sh
-
-# Leer documentación completa
-cat DEPLOY-VERCEL.md
-```
-
-**Opciones recomendadas:**
-- **Frontend**: Vercel (gratuito, automático desde GitHub)
-- **Backend**: Render (gratuito con cold starts, $7/mes sin cold starts)
-
-**Pasos rápidos:**
-1. Push tu código a GitHub
-2. Deploy backend en [Render](https://render.com)
-3. Deploy frontend en [Vercel](https://vercel.com)
-4. Configura variables de entorno (OPENAI_API_KEY, VITE_API_URL)
-
-Ver [DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md) para instrucciones paso a paso.
-
-## 👥 Gestión de Estudiantes
-
-### Agregar Estudiantes Manualmente
-
-Los estudiantes se almacenan en la base de datos SQLite (`backend/simts.db`). Para agregar nuevos estudiantes:
-
-**Opción 1: Usando SQLite directamente**
-
-```bash
-# Acceder a la base de datos
-cd backend
-sqlite3 simts.db
-
-# Insertar un nuevo estudiante
-INSERT INTO students (username, name, email, password, created_at)
-VALUES ('juan.perez', 'Juan Pérez', 'juan.perez@universidad.cl', 'password123', datetime('now'));
-
-# Verificar
-SELECT id, username, name, email FROM students;
-
-# Salir
-.quit
-```
-
-**Opción 2: Usando Python**
-
-```python
-import sqlite3
-from datetime import datetime
-
-conn = sqlite3.connect('backend/simts.db')
-cursor = conn.cursor()
-
-# Insertar estudiante
-cursor.execute('''
-    INSERT INTO students (username, name, email, password, created_at)
-    VALUES (?, ?, ?, ?, ?)
-''', ('maria.lopez', 'María López', 'maria.lopez@universidad.cl', 'password123', datetime.now().isoformat()))
-
-conn.commit()
-print(f"Estudiante agregado con ID: {cursor.lastrowid}")
-conn.close()
-```
-
-**Opción 3: Script de importación masiva**
-
-```bash
-# Crear archivo CSV con estudiantes
-cat > estudiantes.csv << EOF
-username,name,email,password
-carlos.rodriguez,Carlos Rodríguez,carlos.rodriguez@universidad.cl,pass123
-ana.martinez,Ana Martínez,ana.martinez@universidad.cl,pass123
-EOF
-
-# Importar con script Python
-python3 backend/scripts/import_students.py estudiantes.csv
-```
-
-### Estructura de la Tabla Students
-
-```sql
-CREATE TABLE students (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    name TEXT,
-    email TEXT,
-    password TEXT,
-    created_at TEXT,
-    metadata TEXT  -- JSON con información adicional
-);
-```
-
-### Consideraciones de Seguridad
-
-**⚠️ IMPORTANTE:** En producción, las contraseñas deben estar hasheadas. Actualmente el sistema usa contraseñas en texto plano para desarrollo.
-
-**Para producción, implementar:**
-1. Hash de contraseñas con bcrypt o similar
-2. Sistema de registro con validación de email
-3. Recuperación de contraseñas
-4. Panel administrativo para gestión de usuarios
-
-### Próximas Mejoras
-
-Se planea implementar:
-- Panel de administración en la interfaz web
-- Registro de estudiantes con auto-aprobación o moderación
-- Importación masiva desde CSV/Excel
-- Integración con sistemas institucionales (LDAP, OAuth)
-- Gestión de roles y permisos
-
+- La app esta optimizada para uso pedagogico y apoyo docente.
+- Las respuestas abiertas se trabajan localmente en el frontend.

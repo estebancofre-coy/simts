@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+import requests
 import db as _db
 
 # Carga variables de entorno desde .env en desarrollo
@@ -19,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 
 class DummyResponses:
     def create(self, *args, **kwargs):
-        raise RuntimeError("OPENAI_API_KEY no configurada. Establece la variable de entorno OPENAI_API_KEY o mokea 'client.responses.create' en tests.")
+        raise RuntimeError("Cliente OpenAI no configurado. Establece OPENAI_API_KEY o usa Gemini con GEMINI_API_KEY.")
 
 
 class ClientWrapper:
@@ -40,6 +41,9 @@ class ClientWrapper:
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "gemini").strip().lower()
 client = ClientWrapper(api_key=OPENAI_API_KEY)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
@@ -82,11 +86,15 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint para verificar que el backend está funcionando."""
+    llm_provider = get_active_llm_provider()
     return {
         "status": "healthy",
         "service": "simts-backend",
         "db_connected": os.path.exists(DB_PATH),
-        "openai_configured": bool(OPENAI_API_KEY)
+        "openai_configured": bool(OPENAI_API_KEY),
+        "gemini_configured": bool(GEMINI_API_KEY),
+        "llm_provider": llm_provider,
+        "llm_configured": llm_provider is not None
     }
 
 
@@ -144,15 +152,193 @@ def extract_text_from_response(response) -> Optional[str]:
     return None
 
 
+def extract_text_from_gemini_response(response_data) -> Optional[str]:
+    """Extrae texto de la respuesta REST de Gemini."""
+    if not isinstance(response_data, dict):
+        return None
+
+    parts = []
+    for candidate in response_data.get("candidates", []):
+        if not isinstance(candidate, dict):
+            continue
+        content = candidate.get("content") or {}
+        for part in content.get("parts", []):
+            if not isinstance(part, dict):
+                continue
+            text = part.get("text")
+            if text:
+                parts.append(text)
+
+    if parts:
+        return "\n".join(parts)
+
+    return None
+
+
+def get_active_llm_provider() -> Optional[str]:
+    """Resuelve el proveedor activo de LLM con fallback seguro."""
+    if LLM_PROVIDER == "openai":
+        return "openai" if OPENAI_API_KEY else ("gemini" if GEMINI_API_KEY else None)
+
+    if LLM_PROVIDER == "gemini":
+        return "gemini" if GEMINI_API_KEY else ("openai" if OPENAI_API_KEY else None)
+
+    if GEMINI_API_KEY:
+        return "gemini"
+    if OPENAI_API_KEY:
+        return "openai"
+    return None
+
+
+def call_llm(prompt_text: str, expect_json: bool = False):
+    """Llama al proveedor configurado y devuelve (texto, raw_response, provider)."""
+    provider = get_active_llm_provider()
+    if provider == "gemini":
+        api_key = GEMINI_API_KEY
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY no configurada")
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent"
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt_text}]}],
+            "generationConfig": {
+                "temperature": 0.2,
+            },
+        }
+        if expect_json:
+            payload["generationConfig"]["responseMimeType"] = "application/json"
+
+        try:
+            response = requests.post(url, params={"key": api_key}, json=payload, timeout=120)
+            response.raise_for_status()
+            raw = response.json()
+        except requests.RequestException as exc:
+            logger.exception("Error llamando a Gemini")
+            detail = getattr(getattr(exc, "response", None), "text", None) or str(exc)
+            raise RuntimeError(f"Error llamando a Gemini: {detail}") from exc
+
+        text = extract_text_from_gemini_response(raw) or ""
+        return text, raw, "gemini"
+
+    if provider == "openai":
+        try:
+            resp = client.responses.create(
+                input=prompt_text,
+            )
+        except Exception as exc:
+            logger.exception("Error llamando a OpenAI")
+            raise RuntimeError(str(exc)) from exc
+
+        text = extract_text_from_response(resp) or ""
+        try:
+            raw = resp.to_dict() if hasattr(resp, "to_dict") else getattr(resp, "__dict__", repr(resp))
+        except Exception:
+            raw = repr(resp)
+        return text, raw, "openai"
+
+    raise RuntimeError("No hay proveedor de IA configurado. Define GEMINI_API_KEY o OPENAI_API_KEY.")
+
+
+def normalize_case_object(case_obj: dict, requested_theme: str, requested_difficulty: str) -> dict:
+    """Normaliza la salida del LLM al esquema consumido por el frontend."""
+    if not isinstance(case_obj, dict):
+        return {}
+
+    title = case_obj.get("title") or case_obj.get("titulo") or case_obj.get("case_id")
+    description = case_obj.get("description") or case_obj.get("text") or case_obj.get("relato") or ""
+    theme = case_obj.get("eje") or case_obj.get("theme") or case_obj.get("tema") or requested_theme
+    difficulty = case_obj.get("nivel") or case_obj.get("difficulty") or requested_difficulty
+
+    if not title:
+        if isinstance(description, str) and description.strip():
+            title = description.strip().split(".")[0][:80]
+        else:
+            title = f"Caso {theme}"
+
+    raw_questions = (
+        case_obj.get("questions")
+        or case_obj.get("preguntas")
+        or case_obj.get("preguntas_evaluacion")
+        or []
+    )
+    questions = []
+    if isinstance(raw_questions, list):
+        for q in raw_questions:
+            if not isinstance(q, dict):
+                continue
+            q_text = q.get("question") or q.get("text") or q.get("pregunta")
+            if not q_text:
+                continue
+            questions.append(
+                {
+                    "question": q_text,
+                    "options": [],
+                    "correct_index": None,
+                    "justification": q.get("justification") or q.get("explanation") or q.get("justificacion") or q.get("explicacion") or "",
+                }
+            )
+
+    if not questions:
+        questions = [
+            {
+                "question": "¿Cuáles son los factores de riesgo y de protección más relevantes del caso?",
+                "options": [],
+                "correct_index": None,
+                "justification": "Se espera identificar factores individuales, familiares y comunitarios con enfoque de derechos.",
+            },
+            {
+                "question": "¿Qué red institucional debiera activarse en primera respuesta y por qué?",
+                "options": [],
+                "correct_index": None,
+                "justification": "La respuesta debe articular servicios de salud, educación, municipio y protección social según pertinencia.",
+            },
+            {
+                "question": "Propón un plan de intervención breve con objetivos, acciones y criterios de seguimiento.",
+                "options": [],
+                "correct_index": None,
+                "justification": "La propuesta debe incluir objetivos medibles y coordinación intersectorial.",
+            },
+        ]
+
+    objectives = (
+        case_obj.get("learning_objectives")
+        or case_obj.get("checklist")
+        or case_obj.get("objetivos_aprendizaje")
+        or []
+    )
+    if not isinstance(objectives, list):
+        objectives = []
+
+    suggested_questions = case_obj.get("suggested_questions") or case_obj.get("preguntas_sugeridas") or []
+    if not isinstance(suggested_questions, list):
+        suggested_questions = []
+
+    suggested_interventions = case_obj.get("suggested_interventions") or case_obj.get("intervenciones_sugeridas") or []
+    if not isinstance(suggested_interventions, list):
+        suggested_interventions = []
+
+    meta = case_obj.get("meta") or case_obj.get("ficha") or f"Tema: {theme}. Nivel: {difficulty}."
+
+    return {
+        "case_id": case_obj.get("case_id") or case_obj.get("id") or title,
+        "title": title,
+        "eje": theme,
+        "nivel": difficulty,
+        "meta": meta,
+        "description": description,
+        "learning_objectives": objectives,
+        "questions": questions,
+        "suggested_questions": suggested_questions,
+        "suggested_interventions": suggested_interventions,
+    }
+
+
 @app.post("/api/simulate")
 async def simulate(req: SimulateRequest):
     """Recibe el texto del caso y llama al prompt ID preconfigurado en el servidor.
 
-    Nota: el `prompt id` está incrustado aquí según lo provisto; si querés usar
-    diferentes prompts por caso, pasalos en `options`.
+    Nota: el proveedor de IA se resuelve por `SIMTS_LLM_PROVIDER`.
     """
-
-    PROMPT_ID = "pmpt_692bbe09d0b481968c7281d521eb16760a51d9f0c77edf52"
 
     # Si solicita generar un caso nuevo, construimos una instrucción clara para el prompt
     if req.generate:
@@ -233,22 +419,47 @@ async def simulate(req: SimulateRequest):
             'extenso': '6 párrafos'
         }
         prompt_input += f"\nUsa {length_map.get(case_length, '5 párrafos')} para el relato.\n"
-        prompt_input += "\nResponde únicamente con el JSON especificado en tu configuración, sin texto adicional."
+        prompt_input += """
+
+Devuelve SOLO JSON válido (sin markdown) con este esquema exacto:
+{
+    "case_id": "string",
+    "title": "string",
+    "eje": "string",
+    "nivel": "bajo|medio|alto",
+    "meta": "string",
+    "description": "string",
+    "learning_objectives": ["string", "string"],
+    "questions": [
+        {
+            "question": "string",
+            "options": [],
+            "correct_index": null,
+            "justification": "string"
+        }
+    ],
+    "suggested_questions": ["string"],
+    "suggested_interventions": ["string"]
+}
+
+Reglas:
+- Incluye entre 4 y 6 preguntas en total.
+- Todas las preguntas deben ser abiertas.
+- Usa siempre options = [] y correct_index = null.
+- Asegura coherencia entre relato, objetivos y preguntas.
+- No agregues texto fuera del JSON.
+"""
         
         api_start = time.time()
         try:
-            resp = client.responses.create(
-                prompt={"id": PROMPT_ID, "version": "3"},
-                input=prompt_input,
-            )
+            text, raw, provider = call_llm(prompt_input, expect_json=True)
         except Exception as e:
-            logger.exception("Error llamando a OpenAI para generar caso")
+            logger.exception("Error llamando a Gemini para generar caso")
             raise HTTPException(status_code=500, detail=str(e))
         
         api_time = time.time() - api_start
-        logger.info(f"OpenAI API call took {api_time:.2f}s")
+        logger.info(f"{provider.capitalize()} API call took {api_time:.2f}s")
 
-        text = extract_text_from_response(resp) or ""
         # Intentamos parsear JSON del texto retornado
         case_obj = None
         try:
@@ -263,10 +474,8 @@ async def simulate(req: SimulateRequest):
             except Exception:
                 case_obj = None
 
-        try:
-            raw = resp.to_dict() if hasattr(resp, "to_dict") else getattr(resp, "__dict__", repr(resp))
-        except Exception:
-            raw = repr(resp)
+        if case_obj:
+            case_obj = normalize_case_object(case_obj, requested_theme=theme, requested_difficulty=difficulty_prompt)
 
         # Guardar automáticamente el caso si pudimos parsear un objeto
         saved = None
@@ -285,6 +494,7 @@ async def simulate(req: SimulateRequest):
             "saved": saved, 
             "text": text, 
             "raw_response": raw,
+            "provider": provider,
             "metrics": {
                 "total_time": round(total_time, 2),
                 "api_time": round(api_time, 2),
@@ -295,21 +505,12 @@ async def simulate(req: SimulateRequest):
     # Si llega texto libre para analizar
     if req.case_text:
         try:
-            resp = client.responses.create(
-                prompt={"id": PROMPT_ID, "version": "3"},
-                input=req.case_text,
-            )
+            text, raw, provider = call_llm(req.case_text)
         except Exception as e:
-            logger.exception("Error llamando a OpenAI")
+            logger.exception("Error llamando a Gemini")
             raise HTTPException(status_code=500, detail=str(e))
 
-        text = extract_text_from_response(resp)
-        try:
-            raw = resp.to_dict() if hasattr(resp, "to_dict") else getattr(resp, "__dict__", repr(resp))
-        except Exception:
-            raw = repr(resp)
-
-        return {"ok": True, "text": text, "raw_response": raw}
+        return {"ok": True, "text": text, "raw_response": raw, "provider": provider}
 
     raise HTTPException(status_code=400, detail="Petición inválida: enviar 'generate' o 'case_text'.")
 

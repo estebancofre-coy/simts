@@ -49,10 +49,15 @@ probe_endpoints() {
   log "Probing history via Vite proxy (/api/cases)"
   curl -fsS http://127.0.0.1:5173/api/cases | head -c 800 || true; echo
 
-  log "Generating sample case via backend (/api/simulate)"
-  curl -fsS -X POST http://127.0.0.1:8000/api/simulate \
-    -H 'Content-Type: application/json' \
-    -d '{"generate":true, "theme":"Infancia y adolescencia", "difficulty":"medio"}' | head -c 800 || true; echo
+  if [[ -n "${GEMINI_API_KEY:-}" || -n "${OPENAI_API_KEY:-}" ]]; then
+    log "Generating sample case via backend (/api/simulate)"
+    curl -fsS -X POST http://127.0.0.1:8000/api/simulate \
+      -H 'Content-Type: application/json' \
+      -d '{"generate":true, "theme":"Infancia y adolescencia", "difficulty":"medio"}' | head -c 800 || true; echo
+  else
+    log "Skipping /api/simulate because GEMINI_API_KEY/OPENAI_API_KEY is not set"
+    curl -fsS http://127.0.0.1:8000/api/health | head -c 400 || true; echo
+  fi
 }
 
 open_browser() {
