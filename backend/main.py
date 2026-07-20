@@ -20,17 +20,28 @@ logging.basicConfig(level=logging.INFO)
 
 class DummyResponses:
     def create(self, *args, **kwargs):
-        raise RuntimeError("Cliente OpenAI no configurado. Establece OPENAI_API_KEY o usa Gemini con GEMINI_API_KEY.")
+        raise RuntimeError(
+            "Cliente OpenAI no configurado. Establece OPENAI_API_KEY, o usa Ollama/Gemini."
+        )
 
 
 class ClientWrapper:
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
         self._client = None
-        if api_key:
+        if api_key or base_url:
             # Import tardío para evitar errores en imports de test cuando no hay clave
             from openai import OpenAI as OpenAILib
 
-            self._client = OpenAILib(api_key=api_key)
+            kwargs = {}
+            if api_key:
+                kwargs["api_key"] = api_key
+            if base_url:
+                kwargs["base_url"] = base_url
+            # Para servidores compatibles OpenAI (ej: Ollama), una clave dummy es suficiente.
+            if "api_key" not in kwargs:
+                kwargs["api_key"] = "ollama"
+
+            self._client = OpenAILib(**kwargs)
             # La API moderna de openai presenta un atributo `responses`
             self.responses = getattr(self._client, "responses", None)
             if self.responses is None:
@@ -41,10 +52,14 @@ class ClientWrapper:
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
-LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "gemini").strip().lower()
-client = ClientWrapper(api_key=OPENAI_API_KEY)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "ollama").strip().lower()
+client = ClientWrapper(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
 
@@ -91,6 +106,7 @@ async def health_check():
         "status": "healthy",
         "service": "simts-backend",
         "db_connected": os.path.exists(DB_PATH),
+        "ollama_configured": bool(OLLAMA_BASE_URL),
         "openai_configured": bool(OPENAI_API_KEY),
         "gemini_configured": bool(GEMINI_API_KEY),
         "llm_provider": llm_provider,
@@ -177,12 +193,21 @@ def extract_text_from_gemini_response(response_data) -> Optional[str]:
 
 def get_active_llm_provider() -> Optional[str]:
     """Resuelve el proveedor activo de LLM con fallback seguro."""
+    if LLM_PROVIDER == "ollama":
+        if OLLAMA_BASE_URL:
+            return "ollama"
+        if OPENAI_API_KEY:
+            return "openai"
+        return "gemini" if GEMINI_API_KEY else None
+
     if LLM_PROVIDER == "openai":
-        return "openai" if OPENAI_API_KEY else ("gemini" if GEMINI_API_KEY else None)
+        return "openai" if OPENAI_API_KEY else ("ollama" if OLLAMA_BASE_URL else ("gemini" if GEMINI_API_KEY else None))
 
     if LLM_PROVIDER == "gemini":
-        return "gemini" if GEMINI_API_KEY else ("openai" if OPENAI_API_KEY else None)
+        return "gemini" if GEMINI_API_KEY else ("ollama" if OLLAMA_BASE_URL else ("openai" if OPENAI_API_KEY else None))
 
+    if OLLAMA_BASE_URL:
+        return "ollama"
     if GEMINI_API_KEY:
         return "gemini"
     if OPENAI_API_KEY:
@@ -193,6 +218,37 @@ def get_active_llm_provider() -> Optional[str]:
 def call_llm(prompt_text: str, expect_json: bool = False):
     """Llama al proveedor configurado y devuelve (texto, raw_response, provider)."""
     provider = get_active_llm_provider()
+    if provider == "ollama":
+        url = f"{OLLAMA_BASE_URL.rstrip('/')}/v1/chat/completions"
+        payload = {
+            "model": OLLAMA_MODEL,
+            "messages": [{"role": "user", "content": prompt_text}],
+            "temperature": 0.2,
+        }
+        if expect_json:
+            payload["response_format"] = {"type": "json_object"}
+
+        try:
+            response = requests.post(url, json=payload, timeout=120)
+            response.raise_for_status()
+            raw = response.json()
+        except requests.RequestException as exc:
+            logger.exception("Error llamando a Ollama")
+            detail = getattr(getattr(exc, "response", None), "text", None) or str(exc)
+            raise RuntimeError(f"Error llamando a Ollama: {detail}") from exc
+
+        text = ""
+        try:
+            text = (
+                raw.get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+        except Exception:
+            text = ""
+
+        return text, raw, "ollama"
+
     if provider == "gemini":
         api_key = GEMINI_API_KEY
         if not api_key:
@@ -223,6 +279,7 @@ def call_llm(prompt_text: str, expect_json: bool = False):
     if provider == "openai":
         try:
             resp = client.responses.create(
+                model=OPENAI_MODEL,
                 input=prompt_text,
             )
         except Exception as exc:
@@ -236,7 +293,9 @@ def call_llm(prompt_text: str, expect_json: bool = False):
             raw = repr(resp)
         return text, raw, "openai"
 
-    raise RuntimeError("No hay proveedor de IA configurado. Define GEMINI_API_KEY o OPENAI_API_KEY.")
+    raise RuntimeError(
+        "No hay proveedor de IA configurado. Define OLLAMA_BASE_URL, GEMINI_API_KEY o OPENAI_API_KEY."
+    )
 
 
 def normalize_case_object(case_obj: dict, requested_theme: str, requested_difficulty: str) -> dict:
@@ -454,7 +513,7 @@ Reglas:
         try:
             text, raw, provider = call_llm(prompt_input, expect_json=True)
         except Exception as e:
-            logger.exception("Error llamando a Gemini para generar caso")
+            logger.exception("Error llamando al LLM para generar caso")
             raise HTTPException(status_code=500, detail=str(e))
         
         api_time = time.time() - api_start
@@ -507,7 +566,7 @@ Reglas:
         try:
             text, raw, provider = call_llm(req.case_text)
         except Exception as e:
-            logger.exception("Error llamando a Gemini")
+            logger.exception("Error llamando al LLM")
             raise HTTPException(status_code=500, detail=str(e))
 
         return {"ok": True, "text": text, "raw_response": raw, "provider": provider}
