@@ -56,9 +56,11 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
-LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "ollama").strip().lower()
+DEFAULT_OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+OLLAMA_MAX_TOKENS = int(os.getenv("OLLAMA_MAX_TOKENS", "450"))
+LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "gemini").strip().lower()
 client = ClientWrapper(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
@@ -106,7 +108,7 @@ async def health_check():
         "status": "healthy",
         "service": "simts-backend",
         "db_connected": os.path.exists(DB_PATH),
-        "ollama_configured": bool(OLLAMA_BASE_URL),
+        "ollama_configured": bool(get_ollama_base_url()),
         "openai_configured": bool(OPENAI_API_KEY),
         "gemini_configured": bool(GEMINI_API_KEY),
         "llm_provider": llm_provider,
@@ -191,27 +193,40 @@ def extract_text_from_gemini_response(response_data) -> Optional[str]:
     return None
 
 
+def get_ollama_base_url() -> Optional[str]:
+    """Usa la URL local por defecto solo cuando Ollama fue solicitado explícitamente."""
+    if OLLAMA_BASE_URL:
+        return OLLAMA_BASE_URL
+    if LLM_PROVIDER == "ollama":
+        return DEFAULT_OLLAMA_BASE_URL
+    return None
+
+
 def get_active_llm_provider() -> Optional[str]:
     """Resuelve el proveedor activo de LLM con fallback seguro."""
+    ollama_base_url = get_ollama_base_url()
+
     if LLM_PROVIDER == "ollama":
-        if OLLAMA_BASE_URL:
+        if ollama_base_url:
             return "ollama"
+        if GEMINI_API_KEY:
+            return "gemini"
         if OPENAI_API_KEY:
             return "openai"
-        return "gemini" if GEMINI_API_KEY else None
+        return None
 
     if LLM_PROVIDER == "openai":
-        return "openai" if OPENAI_API_KEY else ("ollama" if OLLAMA_BASE_URL else ("gemini" if GEMINI_API_KEY else None))
+        return "openai" if OPENAI_API_KEY else ("gemini" if GEMINI_API_KEY else ("ollama" if ollama_base_url else None))
 
     if LLM_PROVIDER == "gemini":
-        return "gemini" if GEMINI_API_KEY else ("ollama" if OLLAMA_BASE_URL else ("openai" if OPENAI_API_KEY else None))
+        return "gemini" if GEMINI_API_KEY else ("openai" if OPENAI_API_KEY else ("ollama" if ollama_base_url else None))
 
-    if OLLAMA_BASE_URL:
-        return "ollama"
     if GEMINI_API_KEY:
         return "gemini"
     if OPENAI_API_KEY:
         return "openai"
+    if ollama_base_url:
+        return "ollama"
     return None
 
 
@@ -219,11 +234,17 @@ def call_llm(prompt_text: str, expect_json: bool = False):
     """Llama al proveedor configurado y devuelve (texto, raw_response, provider)."""
     provider = get_active_llm_provider()
     if provider == "ollama":
-        url = f"{OLLAMA_BASE_URL.rstrip('/')}/v1/chat/completions"
+        ollama_base_url = get_ollama_base_url()
+        if not ollama_base_url:
+            raise RuntimeError("OLLAMA_BASE_URL no configurada")
+
+        url = f"{ollama_base_url.rstrip('/')}/v1/chat/completions"
         payload = {
             "model": OLLAMA_MODEL,
             "messages": [{"role": "user", "content": prompt_text}],
             "temperature": 0.2,
+            "max_tokens": OLLAMA_MAX_TOKENS,
+            "stream": False,
         }
         if expect_json:
             payload["response_format"] = {"type": "json_object"}
@@ -294,7 +315,7 @@ def call_llm(prompt_text: str, expect_json: bool = False):
         return text, raw, "openai"
 
     raise RuntimeError(
-        "No hay proveedor de IA configurado. Define OLLAMA_BASE_URL, GEMINI_API_KEY o OPENAI_API_KEY."
+        "No hay proveedor de IA configurado. Define GEMINI_API_KEY, OPENAI_API_KEY o habilita OLLAMA_BASE_URL."
     )
 
 
@@ -402,6 +423,8 @@ async def simulate(req: SimulateRequest):
     # Si solicita generar un caso nuevo, construimos una instrucción clara para el prompt
     if req.generate:
         start_time = time.time()
+        llm_provider = get_active_llm_provider()
+        is_ollama = llm_provider == "ollama"
         
         theme = req.theme or "temas de trabajo social general"
         difficulty = (req.difficulty or "basico").lower()
@@ -473,12 +496,27 @@ async def simulate(req: SimulateRequest):
         # Extensión del caso
         case_length = req.case_length or 'medio'
         length_map = {
-            'corto': '4 párrafos',
-            'medio': '5 párrafos',
-            'extenso': '6 párrafos'
+            'corto': '2 párrafos breves' if is_ollama else '4 párrafos',
+            'medio': '3 párrafos breves' if is_ollama else '5 párrafos',
+            'extenso': '4 párrafos breves' if is_ollama else '6 párrafos'
         }
         prompt_input += f"\nUsa {length_map.get(case_length, '5 párrafos')} para el relato.\n"
-        prompt_input += """
+
+        if is_ollama:
+            prompt_input += """
+
+Responde SOLO con JSON minificado y completo.
+Keys exactas: case_id,title,eje,nivel,meta,description,learning_objectives,questions,suggested_questions,suggested_interventions.
+Usa nivel bajo, medio o alto.
+description: maximo 80 palabras.
+learning_objectives: exactamente 2 strings cortos.
+questions: exactamente 3 objetos con question, options=[], correct_index=null, justification corto.
+suggested_questions: exactamente 2 strings.
+suggested_interventions: exactamente 2 strings.
+Sin markdown. Sin texto extra. Termina justo en la llave final.
+"""
+        else:
+            prompt_input += """
 
 Devuelve SOLO JSON válido (sin markdown) con este esquema exacto:
 {

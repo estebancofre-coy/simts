@@ -7,7 +7,7 @@ Esta guía te ayudará a desplegar la aplicación SimTS (FastAPI backend + React
 ### Requisitos Previos
 - ✅ Cuenta en [Vercel](https://vercel.com)
 - ✅ Cuenta en [GitHub](https://github.com)
-- ✅ API Key de OpenAI (`OPENAI_API_KEY`)
+- ✅ API Key de Gemini (`GEMINI_API_KEY`)
 - ✅ Código en un repositorio Git
 
 ### Arquitectura de la Aplicación
@@ -71,7 +71,8 @@ Ve a https://render.com y crea una cuenta (puedes usar GitHub).
 
 En la sección **Environment**:
 ```
-OPENAI_API_KEY=sk-your-api-key-here
+GEMINI_API_KEY=tu-api-key-gemini
+SIMTS_LLM_PROVIDER=gemini
 PORT=10000
 ```
 
@@ -234,7 +235,8 @@ handler = app
     }
   ],
   "env": {
-    "OPENAI_API_KEY": "@openai-api-key"
+    "GEMINI_API_KEY": "@gemini-api-key",
+    "SIMTS_LLM_PROVIDER": "gemini"
   }
 }
 ```
@@ -253,7 +255,7 @@ python-dotenv
 vercel
 
 # Agregar variables de entorno
-vercel env add OPENAI_API_KEY
+vercel env add GEMINI_API_KEY
 # Pegar tu API key
 ```
 
@@ -268,7 +270,8 @@ vercel env add OPENAI_API_KEY
 
 ### En Render (Backend)
 ```
-OPENAI_API_KEY=sk-...
+GEMINI_API_KEY=tu-api-key-gemini
+SIMTS_LLM_PROVIDER=gemini
 PORT=10000
 SIMTS_DB_PATH=/opt/render/project/data/cases.db
 ```

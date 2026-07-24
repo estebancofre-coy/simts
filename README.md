@@ -5,7 +5,7 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 
 ## Alcance actual
 
-- Generacion de casos con IA (Ollama local por defecto; Gemini/OpenAI opcionales como fallback tecnico).
+- Generacion de casos con IA (Gemini por defecto; OpenAI opcional y Ollama local como alternativa experimental).
 - Modo de uso pedagogico: no requiere login para el flujo principal.
 - Preguntas abiertas para reflexion y discusion.
 - Exportacion del caso en formato copiable y descargable en HTML.
@@ -29,20 +29,22 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 
 Crear backend/.env con:
 
-SIMTS_LLM_PROVIDER=ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2:3b
+GEMINI_API_KEY=tu-api-key-gemini
+SIMTS_LLM_PROVIDER=gemini
+GEMINI_MODEL=gemini-3-flash-preview
 
-Opcional para OpenAI compatible (si prefieres usar SDK OpenAI con base URL personalizada):
+Opcional fallback OpenAI:
+
+OPENAI_API_KEY=tu-api-key-openai
+OPENAI_MODEL=gpt-4o-mini
+
+Ollama local experimental:
 
 OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 OPENAI_API_KEY=ollama
 OPENAI_MODEL=llama3.2:3b
-
-Opcional fallback:
-
-GEMINI_API_KEY=tu-api-key-gemini
-GEMINI_MODEL=gemini-3-flash-preview
+OLLAMA_MODEL=llama3.2:3b
 
 ## Ejecucion local
 
