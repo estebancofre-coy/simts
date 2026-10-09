@@ -25,9 +25,9 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 
 El frontend y su logo se alojan en GitHub Pages, sin Vercel ni servicios
 externos de almacenamiento. El backend sigue en su servicio actual con sus
-claves de IA y base de datos. El workflow de Pages usa la variable publica
-de Actions `VITE_API_URL` y publica solamente el resultado de la compilacion,
-no la documentacion ni el codigo Python.
+claves de IA y base de datos. El script de despliegue publica solamente el
+resultado de la compilacion en la rama `gh-pages`, no la documentacion ni el
+codigo Python. GitHub Pages sirve esa rama.
 
 ## Estructura relevante
 
@@ -36,7 +36,7 @@ no la documentacion ni el codigo Python.
 - frontend/src/styles.css: sistema visual y layout.
 - backend/main.py: endpoints API y generacion con IA.
 - backend/db.py: capa de datos SQLite.
-- .github/workflows/pages.yml: compilacion y publicacion del frontend.
+- scripts/deploy_pages.sh: compilacion y publicacion del frontend.
 
 ## Variables de entorno backend
 

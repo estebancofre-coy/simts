@@ -213,7 +213,7 @@ simts/
 ### Frontend (GitHub Pages)
 ```
 URL: https://estebancofre-coy.github.io/simts/
-Build: npm ci && npm test && npm run build (workflow Pages)
+Build: scripts/deploy_pages.sh (npm ci, tests y build para Pages)
 Output: frontend/dist
 ```
 
