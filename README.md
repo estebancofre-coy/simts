@@ -37,6 +37,14 @@ Opcional fallback:
 
 OPENAI_API_KEY=tu-api-key-openai
 SIMTS_LLM_PROVIDER=openai
+OPENAI_MODEL=gpt-4o-mini
+
+`OPENAI_MODEL` es opcional y usa `gpt-4o-mini` por defecto. Si lo configuras,
+debe contener un modelo compatible con Responses API y disponible para tu
+cuenta de OpenAI; no puede quedar vacio. Tambien se usa cuando OpenAI actua
+como proveedor alternativo por falta de una clave de Gemini.
+En un despliegue existente, aplica estos cambios al backend y reinicia o
+redespliega el servicio para cargar la configuracion.
 
 ## Ejecucion local
 

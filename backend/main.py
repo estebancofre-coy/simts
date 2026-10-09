@@ -41,6 +41,7 @@ class ClientWrapper:
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "gemini").strip().lower()
@@ -221,8 +222,11 @@ def call_llm(prompt_text: str, expect_json: bool = False):
         return text, raw, "gemini"
 
     if provider == "openai":
+        if not OPENAI_MODEL:
+            raise RuntimeError("OPENAI_MODEL no puede estar vacio. Configura un modelo de OpenAI valido.")
         try:
             resp = client.responses.create(
+                model=OPENAI_MODEL,
                 input=prompt_text,
             )
         except Exception as exc:
