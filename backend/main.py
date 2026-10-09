@@ -2,7 +2,7 @@ import os
 import logging
 import json
 import time
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +46,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
 LLM_PROVIDER = os.getenv("SIMTS_LLM_PROVIDER", "gemini").strip().lower()
 client = ClientWrapper(api_key=OPENAI_API_KEY)
+
+CASE_LENGTH_RANGES = {
+    "corto": (300, 500),
+    "medio": (600, 900),
+    "extenso": (1200, 1600),
+}
+CASE_GENERATION_MAX_TOKENS = 16384
 
 app = FastAPI(title="Simulador Trabajo Social - Backend")
 
@@ -108,7 +115,7 @@ class SimulateRequest(BaseModel):
     # Nuevos parámetros para mayor control
     age_group: Optional[str] = None  # 'primera_infancia'|'niñez'|'adolescencia'|'adultez'|'adulto_mayor'
     context: Optional[str] = None  # 'urbano'|'rural'|'rural_extremo'
-    case_length: Optional[str] = None  # 'corto'|'medio'|'extenso'
+    case_length: Optional[Literal["corto", "medio", "extenso"]] = None
     focus_area: Optional[str] = None  # 'derechos_humanos'|'enfoque_genero'|'determinantes_sociales'|'comunitario'|'sistemico_familiar'
     competency: Optional[str] = None  # 'diagnostico_social'|'diseño_intervencion'|'articulacion_redes'|'entrevista_vinculacion'|'evaluacion'
 
@@ -208,6 +215,7 @@ def call_llm(prompt_text: str, expect_json: bool = False):
         }
         if expect_json:
             payload["generationConfig"]["responseMimeType"] = "application/json"
+            payload["generationConfig"]["maxOutputTokens"] = CASE_GENERATION_MAX_TOKENS
 
         try:
             response = requests.post(url, params={"key": api_key}, json=payload, timeout=120)
@@ -225,9 +233,13 @@ def call_llm(prompt_text: str, expect_json: bool = False):
         if not OPENAI_MODEL:
             raise RuntimeError("OPENAI_MODEL no puede estar vacio. Configura un modelo de OpenAI valido.")
         try:
+            generation_options = {}
+            if expect_json:
+                generation_options["max_output_tokens"] = CASE_GENERATION_MAX_TOKENS
             resp = client.responses.create(
                 model=OPENAI_MODEL,
                 input=prompt_text,
+                **generation_options,
             )
         except Exception as exc:
             logger.exception("Error llamando a OpenAI")
@@ -417,13 +429,20 @@ async def simulate(req: SimulateRequest):
         
         # Extensión del caso
         case_length = req.case_length or 'medio'
-        length_map = {
-            'corto': '4 párrafos',
-            'medio': '5 párrafos',
-            'extenso': '6 párrafos'
-        }
-        prompt_input += f"\nUsa {length_map.get(case_length, '5 párrafos')} para el relato.\n"
+        min_words, max_words = CASE_LENGTH_RANGES[case_length]
+        prompt_input += (
+            f"\nExtensión {case_length}: el campo description debe contener entre "
+            f"{min_words} y {max_words} palabras, sin contar los demás campos del JSON.\n"
+        )
         prompt_input += """
+
+Escribe un relato desarrollado, no una sinopsis, distribuido en párrafos separados por \\n\\n.
+Profundiza en la historia y evolución del problema, composición y dinámica familiar,
+condiciones de vivienda e ingresos, entorno territorial e institucional, redes de apoyo,
+factores de riesgo y protección, perspectivas de los protagonistas y dilemas de intervención.
+Incluye antecedentes concretos, una secuencia temporal y voces de los protagonistas
+que permitan fundamentar el análisis social. Ajusta la profundidad a la extensión pedida.
+No alargues el texto con repeticiones ni resuelvas el caso en el relato.
 
 Devuelve SOLO JSON válido (sin markdown) con este esquema exacto:
 {
@@ -455,32 +474,61 @@ Reglas:
 """
         
         api_start = time.time()
-        try:
-            text, raw, provider = call_llm(prompt_input, expect_json=True)
-        except Exception as e:
-            logger.exception("Error llamando a Gemini para generar caso")
-            raise HTTPException(status_code=500, detail=str(e))
-        
-        api_time = time.time() - api_start
-        logger.info(f"{provider.capitalize()} API call took {api_time:.2f}s")
-
-        # Intentamos parsear JSON del texto retornado
         case_obj = None
-        try:
-            case_obj = json.loads(text)
-        except Exception:
-            # si no está en formato JSON exacto, intentamos buscar el primer bloque JSON
+        attempt_prompt = prompt_input
+        for attempt in range(1, 3):
             try:
-                start = text.index('{')
-                end = text.rindex('}')
-                candidate = text[start:end+1]
-                case_obj = json.loads(candidate)
-            except Exception:
-                case_obj = None
+                text, raw, provider = call_llm(attempt_prompt, expect_json=True)
+            except Exception as e:
+                logger.exception("Error llamando al proveedor de IA para generar caso")
+                raise HTTPException(status_code=500, detail=str(e))
 
-        if case_obj:
-            case_obj = normalize_case_object(case_obj, requested_theme=theme, requested_difficulty=difficulty_prompt)
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                # Conserva compatibilidad con respuestas envueltas en markdown.
+                try:
+                    parsed = json.loads(text[text.index('{'):text.rindex('}') + 1])
+                except (ValueError, json.JSONDecodeError):
+                    parsed = None
 
+            case_obj = (
+                normalize_case_object(parsed, requested_theme=theme, requested_difficulty=difficulty_prompt)
+                if isinstance(parsed, dict) and parsed else None
+            )
+            description = case_obj.get("description") if case_obj else None
+            word_count = (
+                len(description.replace("\\n", "\n").split())
+                if isinstance(description, str) else 0
+            )
+            if min_words <= word_count <= max_words:
+                break
+
+            issue = (
+                f"El relato recibido tiene {word_count} palabras."
+                if isinstance(description, str)
+                else "La respuesta no contiene un objeto JSON con description de tipo string."
+            )
+            logger.warning("Generacion intento %s: %s Extension requerida: %s-%s.",
+                           attempt, issue, min_words, max_words)
+            if attempt == 2:
+                raise HTTPException(
+                    status_code=502,
+                    detail=(
+                        f"La IA no pudo generar un caso de extensión {case_length} "
+                        f"({min_words}-{max_words} palabras) tras dos intentos. "
+                        f"{issue} No se guardó el caso. Intenta generar nuevamente."
+                    ),
+                )
+            attempt_prompt = (
+                prompt_input
+                + f"\nCorrección obligatoria: {issue} Genera nuevamente el JSON completo "
+                + f"con description de {min_words}-{max_words} palabras. "
+                + "Desarrolla antecedentes y escenas pertinentes, sin relleno ni repeticiones."
+            )
+
+        api_time = time.time() - api_start
+        logger.info(f"{provider.capitalize()} API calls took {api_time:.2f}s")
         # Guardar automáticamente el caso si pudimos parsear un objeto
         saved = None
         if case_obj:
@@ -502,7 +550,9 @@ Reglas:
             "metrics": {
                 "total_time": round(total_time, 2),
                 "api_time": round(api_time, 2),
-                "processing_time": round(total_time - api_time, 2)
+                "processing_time": round(total_time - api_time, 2),
+                "description_words": word_count,
+                "generation_attempts": attempt,
             }
         }
 

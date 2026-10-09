@@ -80,6 +80,27 @@ URLs:
 
 ## Flujo recomendado docente
 
+La extension controla las palabras del relato (`description`), no el tamaño de
+las preguntas ni del JSON completo:
+
+- Corto: 300-500 palabras.
+- Medio (predeterminado): 600-900 palabras.
+- Extenso: 1200-1600 palabras.
+
+El backend solicita antecedentes, evolucion del problema, contexto familiar y
+territorial, redes y dilemas de intervencion, sin relleno ni una solucion anticipada.
+Comprueba el rango antes de guardar y reintenta una vez si la respuesta no lo
+cumple o no contiene un relato valido. Si ambos intentos fallan, devuelve HTTP 502
+con un error visible y no guarda el caso. Un `case_length` desconocido devuelve
+HTTP 422. La respuesta incluye `metrics.description_words` y
+`metrics.generation_attempts` para comprobar el resultado.
+
+La generacion dispone de hasta 16384 tokens de salida tanto en Gemini como en
+OpenAI; el frontend espera hasta cinco minutos para permitir el reintento. El
+modelo configurado debe admitir ese presupuesto. Los casos ya guardados no se
+modifican: genera un caso nuevo para aplicar las nuevas extensiones. Redespliega
+backend y frontend para que validacion y etiquetas queden sincronizadas.
+
 1. Configurar parametros del caso.
 2. Generar caso nuevo o abrir uno del historial.
 3. Trabajar en vista enfocada de tarjeta grande.

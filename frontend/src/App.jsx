@@ -141,9 +141,9 @@ const COMPETENCIES = [
 ]
 
 const CASE_LENGTHS = [
-  { value: 'corto', label: 'Corto (4 parrafos)' },
-  { value: 'medio', label: 'Medio (5 parrafos)' },
-  { value: 'extenso', label: 'Extenso (6 parrafos)' }
+  { value: 'corto', label: 'Corto (300-500 palabras)' },
+  { value: 'medio', label: 'Medio (600-900 palabras)' },
+  { value: 'extenso', label: 'Extenso (1200-1600 palabras)' }
 ]
 
 export default function App() {
@@ -199,12 +199,11 @@ export default function App() {
     setCaseObj(null)
     setCaseDbId(null)
     setOpenAnswers({})
-    setResponseText('Generando caso... Esto puede tomar entre 30-60 segundos.')
+    setResponseText('Generando y verificando la extension del caso... Puede tomar varios minutos, especialmente en casos extensos.')
 
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 300000)
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 120000)
-
       const res = await fetch(`${API_BASE}/api/simulate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -243,13 +242,14 @@ export default function App() {
       if (data.saved) fetchHistory()
     } catch (e) {
       if (e.name === 'AbortError') {
-        setResponseText('Error: la peticion tardo demasiado (mas de 2 minutos).')
+        setResponseText('Error: la peticion tardo demasiado (mas de 5 minutos).')
       } else if (e.message.includes('Failed to fetch')) {
         setResponseText(`Error de conexion con backend: ${e.message}`)
       } else {
         setResponseText(`Error al generar caso:\n\n${e.message}`)
       }
     } finally {
+      clearTimeout(timeoutId)
       setLoading(false)
     }
   }
