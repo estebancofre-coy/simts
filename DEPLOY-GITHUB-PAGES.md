@@ -38,8 +38,8 @@ Nunca configures `OPENAI_API_KEY`, `GEMINI_API_KEY` ni secretos en variables
 
 El build rechaza una URL ausente, no HTTPS o con credenciales/query/fragmento
 para evitar publicar un frontend que intente llamar a la API en GitHub Pages.
-Al cambiar `VITE_API_URL`, ejecuta nuevamente el workflow: la configuracion
-se incorpora durante la compilacion; vuelve a ejecutar el script.
+Al cambiar `VITE_API_URL`, vuelve a ejecutar el script: la configuracion
+se incorpora durante la compilacion.
 
 ### Automatizacion opcional con Actions
 

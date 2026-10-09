@@ -40,5 +40,6 @@ deployment_commit=$(
 git push origin "$deployment_commit:refs/heads/gh-pages"
 gh api --method PUT "repos/$repository/pages" \
   -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'
+gh api --method POST "repos/$repository/pages/builds"
 
 echo "Frontend publicado desde $source_commit. Verifica el despliegue en GitHub Actions."
