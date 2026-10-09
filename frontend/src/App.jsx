@@ -411,7 +411,7 @@ export default function App() {
         <div className="header-content">
           <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img
-              src="https://zlq2y2bbczxjflne.public.blob.vercel-storage.com/Logos%20Carreras.png"
+              src={`${import.meta.env.BASE_URL}logo-trabajo-social.png`}
               alt="Logo Trabajo Social"
               className="header-logo"
             />

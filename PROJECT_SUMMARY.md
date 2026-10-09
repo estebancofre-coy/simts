@@ -56,7 +56,7 @@
 
 **DevOps**
 - GitHub (Control de versiones)
-- Vercel (Deployment frontend)
+- GitHub Pages (Deployment frontend)
 - Render (Deployment backend)
 - GitHub Actions (CI/CD)
 
@@ -111,7 +111,7 @@ simts/
 │   │   └── styles.css       # Estilos globales
 │   ├── package.json         # Dependencias Node.js
 │   ├── vite.config.js       # Configuración Vite
-│   └── vercel.json          # Configuración Vercel
+│   └── public/              # Recursos locales del frontend
 │
 ├── DEPLOYMENT_GUIDE.md      # Guía de deployments
 ├── LANDING_PAGE_README.md   # Documentación landing
@@ -210,10 +210,10 @@ simts/
 
 ## 🌐 Deployment
 
-### Frontend (Vercel)
+### Frontend (GitHub Pages)
 ```
-URL: https://simts.vercel.app
-Build: npm install && npm run build
+URL: https://estebancofre-coy.github.io/simts/
+Build: npm ci && npm test && npm run build (workflow Pages)
 Output: frontend/dist
 ```
 
@@ -311,7 +311,7 @@ Todos los derechos reservados © 2025.
 ## 🎯 Roadmap 2025
 
 **Q1 2025**
-- [ ] Deployment en Vercel y Render
+- [ ] Deployment en GitHub Pages y backend separado
 - [ ] Testing con estudiantes piloto
 - [ ] Mejoras de UX basadas en feedback
 

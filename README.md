@@ -13,9 +13,21 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 
 ## Arquitectura
 
-- Frontend: React + Vite.
+- Frontend: React + Vite, publicado como sitio estatico en GitHub Pages.
 - Backend: FastAPI.
 - Persistencia: SQLite.
+
+## Sitio publicado
+
+- Frontend: https://estebancofre-coy.github.io/simts/
+- Backend: https://simts.onrender.com
+- Despliegue: [Guia de GitHub Pages](DEPLOY-GITHUB-PAGES.md).
+
+El frontend y su logo se alojan en GitHub Pages, sin Vercel ni servicios
+externos de almacenamiento. El backend sigue en su servicio actual con sus
+claves de IA y base de datos. El workflow de Pages usa la variable publica
+de Actions `VITE_API_URL` y publica solamente el resultado de la compilacion,
+no la documentacion ni el codigo Python.
 
 ## Estructura relevante
 
@@ -24,6 +36,7 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 - frontend/src/styles.css: sistema visual y layout.
 - backend/main.py: endpoints API y generacion con IA.
 - backend/db.py: capa de datos SQLite.
+- .github/workflows/pages.yml: compilacion y publicacion del frontend.
 
 ## Variables de entorno backend
 

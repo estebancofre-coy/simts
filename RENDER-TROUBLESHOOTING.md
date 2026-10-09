@@ -1,5 +1,10 @@
 # 🆘 Troubleshooting - Problemas con Render
 
+> El frontend ahora se aloja en GitHub Pages, no en Vercel. Las alternativas
+> Vercel de este documento son historicas y no forman parte del despliegue
+> actual. Consulta [la guia actual](DEPLOY-GITHUB-PAGES.md); conserva el backend
+> existente y su persistencia.
+
 ## Problema Reportado
 "Tuve problemas conectando a Render, falló"
 
@@ -78,7 +83,7 @@ Railway te dará una URL como: `https://simts-backend.railway.app`
 Si prefieres tener todo en Vercel sin backend separado:
 
 1. Crea carpeta `api/` en la raíz
-2. Sigue las instrucciones de "Opción 2" en `DEPLOY-VERCEL.md`
+2. Esta alternativa historica ya no se usa; consulta [GitHub Pages](DEPLOY-GITHUB-PAGES.md).
 
 **Ventaja:** Todo en un solo lugar
 **Desventaja:** Timeout de 10 segundos
@@ -195,7 +200,7 @@ app = FastAPI(title="Simulador Trabajo Social - Backend")
 # Agregar CORS DESPUÉS de crear app
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción, especifica tu dominio de Vercel
+    allow_origins=["*"],  # En producción, especifica https://estebancofre-coy.github.io
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -226,7 +231,7 @@ Basado en tu situación, te recomiendo:
 
 **2. Si Railway también falla, usa Vercel Serverless**
    - Todo en un solo lugar
-   - Sigue instrucciones de "Opción 2" en `DEPLOY-VERCEL.md`
+   - Esta alternativa historica ya no se usa; consulta [GitHub Pages](DEPLOY-GITHUB-PAGES.md).
 
 **3. Si necesitas ayuda específica con Render**
    - Comparte el error exacto que ves

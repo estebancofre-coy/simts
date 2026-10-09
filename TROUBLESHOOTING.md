@@ -323,7 +323,7 @@ Si el problema persiste después de seguir esta guía:
 ## 📚 Recursos Adicionales
 
 - [README.md](./README.md) - Documentación principal
-- [DEPLOY-VERCEL.md](./DEPLOY-VERCEL.md) - Guía de despliegue
+- [DEPLOY-GITHUB-PAGES.md](./DEPLOY-GITHUB-PAGES.md) - Guía de despliegue
 - [Documentación de Vite](https://vitejs.dev/)
 - [Documentación de FastAPI](https://fastapi.tiangolo.com/)
 

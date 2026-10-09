@@ -1,5 +1,10 @@
 # Diagnóstico del Problema de Login
 
+> Este diagnostico corresponde a un despliegue historico. El flujo principal
+> actual no requiere login y el frontend ahora se publica en GitHub Pages.
+> Para configurar la URL del backend y CORS, consulta
+> [la guia actual](DEPLOY-GITHUB-PAGES.md).
+
 ## Problema Reportado
 Error "Failed to fetch" en los login
 
