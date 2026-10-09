@@ -8,7 +8,8 @@ Genera casos con IA, objetivos de aprendizaje y preguntas abiertas para analisis
 - Generacion de casos con IA (Gemini por defecto; OpenAI opcional como fallback tecnico).
 - Modo de uso pedagogico: no requiere login para el flujo principal.
 - Preguntas abiertas para reflexion y discusion.
-- Exportacion del caso en formato copiable y descargable en HTML.
+- Respuestas abiertas del estudiante, sin respuestas modelo ni intervenciones sugeridas visibles.
+- Exportacion del caso con respuestas: texto copiable, HTML, PDF e impresion.
 - Historial de casos generados y guardados.
 
 ## Arquitectura
@@ -98,7 +99,9 @@ las preguntas ni del JSON completo:
 
 - Corto: 300-500 palabras.
 - Medio (predeterminado): 600-900 palabras.
-- Extenso: 1200-1600 palabras.
+- Extenso: temporalmente deshabilitado para reducir la carga de IA. El backend
+  rechaza estas solicitudes con HTTP 503 antes de llamar al proveedor. Los
+  casos extensos ya guardados siguen disponibles para lectura.
 
 El backend solicita antecedentes, evolucion del problema, contexto familiar y
 territorial, redes y dilemas de intervencion, sin relleno ni una solucion anticipada.
@@ -117,7 +120,16 @@ backend y frontend para que validacion y etiquetas queden sincronizadas.
 1. Configurar parametros del caso.
 2. Generar caso nuevo o abrir uno del historial.
 3. Trabajar en vista enfocada de tarjeta grande.
-4. Copiar salida o descargar HTML para clase y material.
+4. Escribir respuestas a las preguntas abiertas y sugeridas; el docente media
+   las dudas. No se muestran guias de solucion ni intervenciones modelo.
+5. Usar **Descargar PDF con respuestas** para obtener el documento directamente,
+   o **Imprimir / guardar PDF** para abrir la impresion del navegador y elegir
+   Guardar como PDF. Ambas opciones incluyen relato, preguntas y respuestas,
+   sin guias de solucion; el PDF pagina automaticamente respuestas largas.
+
+Las respuestas permanecen solo en la memoria del navegador, no se envian al
+servidor y se reinician al generar/cambiar de caso o recargar. Descarga el PDF
+antes de salir. Copiar y descargar HTML tambien incluyen las respuestas.
 
 ## Scripts utiles
 

@@ -27,7 +27,6 @@ def isolated_db(monkeypatch, tmp_path):
 @pytest.mark.parametrize("case_length,word_count", [
     ("corto", 300),
     ("medio", 600),
-    ("extenso", 1200),
 ])
 def test_generate_retries_short_description(monkeypatch, isolated_db, case_length, word_count):
     calls = []
@@ -51,6 +50,8 @@ def test_generate_retries_short_description(monkeypatch, isolated_db, case_lengt
     assert len(data["case"]["description"].split()) == word_count
     assert len(calls) == 2
     assert str(word_count) in calls[0]
+    assert "No entregues respuestas modelo" in calls[0]
+    assert "suggested_interventions = []" in calls[0]
     assert "3 palabras" in calls[1]
     assert data["metrics"]["description_words"] == word_count
     assert data["metrics"]["generation_attempts"] == 2
@@ -63,7 +64,6 @@ def test_generate_retries_short_description(monkeypatch, isolated_db, case_lengt
 @pytest.mark.parametrize("case_length,word_count", [
     ("corto", 300), ("corto", 500),
     ("medio", 600), ("medio", 900),
-    ("extenso", 1200), ("extenso", 1600),
     (None, 600),
 ])
 def test_generate_accepts_range_boundaries(monkeypatch, isolated_db, case_length, word_count):
@@ -88,7 +88,6 @@ def test_generate_accepts_range_boundaries(monkeypatch, isolated_db, case_length
 @pytest.mark.parametrize("case_length,word_count", [
     ("corto", 299), ("corto", 501),
     ("medio", 599), ("medio", 901),
-    ("extenso", 1199), ("extenso", 1601),
 ])
 def test_generate_rejects_outside_range(monkeypatch, isolated_db, case_length, word_count):
     calls = []
@@ -130,6 +129,17 @@ def test_generate_rejects_unknown_length(monkeypatch):
     monkeypatch.setattr(main, "call_llm", unexpected_call)
     response = client.post("/api/simulate", json={"generate": True, "case_length": "enorme"})
     assert response.status_code == 422
+
+
+def test_generate_blocks_extended_cases_before_ai(monkeypatch, isolated_db):
+    def unexpected_call(*args, **kwargs):
+        pytest.fail("Un caso extenso pausado no debe consumir IA")
+
+    monkeypatch.setattr(main, "call_llm", unexpected_call)
+    response = client.post("/api/simulate", json={"generate": True, "case_length": "extenso"})
+    assert response.status_code == 503
+    assert "temporalmente" in response.json()["detail"]
+    assert main._db.list_cases(isolated_db) == []
 
 
 @pytest.mark.parametrize("generate", [True, False])

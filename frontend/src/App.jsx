@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
+import { CASE_LENGTHS, createWorksheetPdf, formatWorksheetHtml, formatWorksheetText, getStudentQuestions } from './worksheet'
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
   return (
     <div style={{ marginTop: 20 }}>
-      <h3>Preguntas de evaluacion</h3>
+      <h3>Preguntas para responder</h3>
+      <p>Escribe tu analisis. Las dudas se trabajan con el docente, sin respuestas automaticas.</p>
       {questions.map((q, qIndex) => (
         <div
           key={qIndex}
@@ -22,10 +24,11 @@ function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <label style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>
+            <label htmlFor={`answer-${qIndex}`} style={{ display: 'block', marginBottom: 6, fontWeight: 'bold' }}>
               Analisis / respuesta abierta
             </label>
             <textarea
+              id={`answer-${qIndex}`}
               value={openAnswers?.[qIndex] || ''}
               onChange={(e) => onOpenAnswerChange?.(qIndex, e.target.value)}
               rows={4}
@@ -34,18 +37,6 @@ function QuestionsList({ questions, openAnswers, onOpenAnswerChange }) {
             />
           </div>
 
-          <div
-            style={{
-              marginTop: 12,
-              padding: 12,
-              backgroundColor: '#fff3cd',
-              border: '1px solid #ffc107',
-              borderRadius: 6,
-              fontSize: 14
-            }}
-          >
-            <strong>Guia docente:</strong> {q.justification || q.explanation || 'No disponible'}
-          </div>
         </div>
       ))}
     </div>
@@ -140,12 +131,6 @@ const COMPETENCIES = [
   { value: 'evaluacion', label: 'Evaluacion de Resultados' }
 ]
 
-const CASE_LENGTHS = [
-  { value: 'corto', label: 'Corto (300-500 palabras)' },
-  { value: 'medio', label: 'Medio (600-900 palabras)' },
-  { value: 'extenso', label: 'Extenso (1200-1600 palabras)' }
-]
-
 export default function App() {
   const [theme, setTheme] = useState(THEMES[0])
   const [difficulty, setDifficulty] = useState('basico')
@@ -182,8 +167,9 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/cases/${caseId}`)
       const data = await res.json()
       if (data.ok && data.case) {
-        setCaseObj(data.case)
+        setCaseObj(data.case.payload || data.case)
         setCaseDbId(caseId)
+        setOpenAnswers({})
         setResponseText('')
         setShowExistingCases(false)
         setShowCaseOverlay(true)
@@ -195,11 +181,15 @@ export default function App() {
   }
 
   async function generateCase() {
+    if (caseLength === 'extenso') {
+      setResponseText('Los casos extensos estan temporalmente deshabilitados. Selecciona corto o medio.')
+      return
+    }
     setLoading(true)
     setCaseObj(null)
     setCaseDbId(null)
     setOpenAnswers({})
-    setResponseText('Generando y verificando la extension del caso... Puede tomar varios minutos, especialmente en casos extensos.')
+    setResponseText('Generando y verificando la extension del caso... Puede tomar varios minutos.')
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 300000)
@@ -276,107 +266,36 @@ export default function App() {
   }
 
   function formatCaseAsText(caseData) {
-    if (!caseData) return ''
-    const lines = []
-    lines.push(`CASO: ${caseData.title || caseData.case_id || 'Caso generado'}`)
-    lines.push(`Eje: ${caseData.eje || 'No especificado'} | Nivel: ${caseData.nivel || 'No especificado'}`)
-    lines.push('')
-
-    if (caseData.meta) {
-      lines.push('FICHA')
-      lines.push(caseData.meta)
-      lines.push('')
-    }
-
-    lines.push('RELATO')
-    lines.push((caseData.description || caseData.text || '').replace(/\\n/g, '\n'))
-    lines.push('')
-
-    const objectives = caseData.learning_objectives || caseData.checklist || []
-    if (objectives.length > 0) {
-      lines.push('OBJETIVOS DE APRENDIZAJE')
-      objectives.forEach((obj, idx) => lines.push(`${idx + 1}. ${obj}`))
-      lines.push('')
-    }
-
-    const questions = caseData.questions || []
-    if (questions.length > 0) {
-      lines.push('PREGUNTAS ABIERTAS')
-      questions.forEach((q, idx) => {
-        lines.push(`${idx + 1}. ${q.question || q.text || ''}`)
-        if (q.justification || q.explanation) {
-          lines.push(`   Guia docente: ${q.justification || q.explanation}`)
-        }
-      })
-      lines.push('')
-    }
-
-    const interventions = caseData.suggested_interventions || []
-    if (interventions.length > 0) {
-      lines.push('INTERVENCIONES SUGERIDAS')
-      interventions.forEach((it, idx) => lines.push(`${idx + 1}. ${it}`))
-    }
-
-    return lines.join('\n')
-  }
-
-  function escapeHtml(text) {
-    return String(text || '')
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#39;')
+    return formatWorksheetText(caseData, openAnswers)
   }
 
   function formatCaseAsHtml(caseData) {
-    const title = caseData?.title || caseData?.case_id || 'Caso generado'
-    const objectives = caseData?.learning_objectives || caseData?.checklist || []
-    const questions = caseData?.questions || []
-    const interventions = caseData?.suggested_interventions || []
+    return formatWorksheetHtml(caseData, openAnswers)
+  }
 
-    return `<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    body { font-family: 'Source Sans 3', Arial, sans-serif; margin: 32px; color: #182536; line-height: 1.6; }
-    .card { border: 1px solid #d5dde7; border-radius: 12px; overflow: hidden; }
-    .head { background: #1f3a56; color: #fff; padding: 18px 22px; }
-    .head h1 { margin: 0 0 6px; font-size: 24px; }
-    .meta { opacity: .95; font-size: 14px; }
-    .section { padding: 18px 22px; border-top: 1px solid #e2e8f0; }
-    h2 { margin: 0 0 10px; font-size: 18px; color: #1f3a56; }
-    ul { margin: 0; padding-left: 18px; }
-    li { margin-bottom: 8px; }
-    .question { margin-bottom: 14px; }
-    .guide { color: #4b5563; font-size: 14px; margin-top: 4px; }
-    .study { margin: 18px 0 0; padding: 12px; border: 1px solid #b8c4d2; border-radius: 8px; background: #f7f9fc; font-size: 14px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="head">
-      <h1>${escapeHtml(title)}</h1>
-      <div class="meta">Eje: ${escapeHtml(caseData?.eje || 'No especificado')} | Nivel: ${escapeHtml(caseData?.nivel || 'No especificado')}</div>
-    </div>
-    <div class="section">
-      <h2>Ficha</h2>
-      <p>${escapeHtml(caseData?.meta || 'Sin ficha disponible')}</p>
-    </div>
-    <div class="section">
-      <h2>Relato del caso</h2>
-      <p>${escapeHtml((caseData?.description || caseData?.text || '').replace(/\\n/g, '\n')).replaceAll('\n', '<br/>')}</p>
-    </div>
-    ${objectives.length ? `<div class="section"><h2>Objetivos de aprendizaje</h2><ul>${objectives.map((o) => `<li>${escapeHtml(o)}</li>`).join('')}</ul></div>` : ''}
-    ${questions.length ? `<div class="section"><h2>Preguntas abiertas</h2>${questions.map((q, idx) => `<div class="question"><strong>${idx + 1}. ${escapeHtml(q.question || q.text || '')}</strong><div class="guide">Guia docente: ${escapeHtml(q.justification || q.explanation || 'No disponible')}</div></div>`).join('')}</div>` : ''}
-    ${interventions.length ? `<div class="section"><h2>Intervenciones sugeridas</h2><ul>${interventions.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul></div>` : ''}
-  </div>
-  <div class="study">Material pedagogico: las respuestas se trabajan localmente y no se envian al servidor.</div>
-</body>
-</html>`
+  function downloadCasePdf() {
+    if (!caseObj) return
+    try {
+      const doc = createWorksheetPdf(caseObj, openAnswers)
+      const filename = (caseObj.title || caseObj.case_id || 'caso').replace(/[^a-zA-Z0-9-_]+/g, '_')
+      doc.save(`${filename}_respuestas.pdf`)
+    } catch (error) {
+      console.error('Error exportando PDF:', error)
+      alert('No se pudo generar el PDF. Tus respuestas siguen en pantalla; intenta nuevamente.')
+    }
+  }
+
+  function printCase() {
+    if (!caseObj) return
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('Permite las ventanas emergentes para imprimir, o utiliza Descargar PDF.')
+      return
+    }
+    printWindow.document.write(formatCaseAsHtml(caseObj))
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
   }
 
   async function copyCaseOutput() {
@@ -555,9 +474,10 @@ export default function App() {
               <label className="form-label">Extension del Caso</label>
               <select className="form-select" value={caseLength} onChange={(e) => setCaseLength(e.target.value)}>
                 {CASE_LENGTHS.map((l) => (
-                  <option value={l.value} key={l.value}>{l.label}</option>
+                  <option value={l.value} key={l.value} disabled={l.disabled}>{l.label}</option>
                 ))}
               </select>
+              <p>La generacion de casos extensos esta pausada temporalmente para reducir la carga de IA.</p>
             </div>
 
             <div className="config-actions-sticky">
@@ -587,6 +507,8 @@ export default function App() {
                   <button className="btn-secondary" onClick={() => setShowCaseOverlay(true)}>Vista enfocada</button>
                   <button className="btn-secondary" onClick={copyCaseOutput}>Copiar salida</button>
                   <button className="btn-secondary" onClick={downloadCaseHtml}>Descargar HTML</button>
+                  <button className="btn-secondary" onClick={downloadCasePdf}>Descargar PDF con respuestas</button>
+                  <button className="btn-secondary" onClick={printCase}>Imprimir / guardar PDF</button>
                 </div>
               )}
             </div>
@@ -620,25 +542,17 @@ export default function App() {
                   </div>
                 )}
 
-                {caseObj.questions && (
+                {!showCaseOverlay && getStudentQuestions(caseObj).length > 0 && (
                   <>
                     <div data-questions-list>
-                      <QuestionsList questions={caseObj.questions} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
+                      <QuestionsList questions={getStudentQuestions(caseObj)} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
                     </div>
                     <div style={{ marginTop: '1.5rem', padding: '1rem', borderRadius: '8px', backgroundColor: '#eef7ff', border: '1px solid #b6d8ff', color: '#003d6b' }}>
-                      Este simulador funciona como material de estudio y apoyo docente. Las respuestas se trabajan localmente y no se envian al servidor.
+                      Tus respuestas no se envian al servidor y se borran al cambiar de caso o recargar. Descarga el PDF antes de salir.
                     </div>
                   </>
                 )}
 
-                {caseObj.suggested_interventions && (
-                  <div className="case-section">
-                    <h4 className="case-section-title">Intervenciones Sugeridas</h4>
-                    <ul className="interventions-list">
-                      {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
-                    </ul>
-                  </div>
-                )}
               </div>
             ) : (
               <div className="empty-state">
@@ -672,6 +586,8 @@ export default function App() {
                     onClick={() => {
                       setCaseObj(c.payload)
                       setCaseDbId(c.id)
+                      setOpenAnswers({})
+                      setResponseText('')
                       setShowCaseOverlay(true)
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
@@ -690,12 +606,14 @@ export default function App() {
           <div className="case-overlay-panel" onClick={(e) => e.stopPropagation()}>
             <div className="case-overlay-toolbar">
               <div>
-                <strong>Vista docente enfocada</strong>
-                <div className="case-overlay-subtitle">Visualizacion completa del caso para trabajo pedagogico</div>
+                <strong>Trabajo del estudiante</strong>
+                <div className="case-overlay-subtitle">Responde las preguntas y aborda tus dudas con el docente.</div>
               </div>
               <div className="case-overlay-actions">
                 <button className="btn-secondary" onClick={copyCaseOutput}>Copiar</button>
                 <button className="btn-secondary" onClick={downloadCaseHtml}>HTML</button>
+                <button className="btn-secondary" onClick={downloadCasePdf}>Descargar PDF con respuestas</button>
+                <button className="btn-secondary" onClick={printCase}>Imprimir / guardar PDF</button>
                 <button className="btn-secondary" onClick={() => setShowCaseOverlay(false)}>Cerrar</button>
               </div>
             </div>
@@ -721,19 +639,12 @@ export default function App() {
                     </ul>
                   </div>
                 )}
-                {caseObj.questions && (
+                {getStudentQuestions(caseObj).length > 0 && (
                   <div className="case-section">
-                    <QuestionsList questions={caseObj.questions} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
+                    <QuestionsList questions={getStudentQuestions(caseObj)} openAnswers={openAnswers} onOpenAnswerChange={handleOpenAnswerChange} />
                   </div>
                 )}
-                {caseObj.suggested_interventions && (
-                  <div className="case-section">
-                    <h4 className="case-section-title">Intervenciones Sugeridas</h4>
-                    <ul className="interventions-list">
-                      {caseObj.suggested_interventions.map((it, i) => <li key={i}>{it}</li>)}
-                    </ul>
-                  </div>
-                )}
+                <p className="case-section">Tus respuestas no se envian al servidor y se borran al cambiar de caso o recargar. Descarga el PDF antes de salir.</p>
               </div>
             </div>
           </div>

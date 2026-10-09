@@ -349,7 +349,9 @@ def normalize_case_object(case_obj: dict, requested_theme: str, requested_diffic
     }
 
 
-@app.post("/api/simulate")
+@app.post("/api/simulate", responses={
+    503: {"description": "Generacion de casos extensos temporalmente deshabilitada"},
+})
 async def simulate(req: SimulateRequest):
     """Recibe el texto del caso y llama al prompt ID preconfigurado en el servidor.
 
@@ -358,6 +360,12 @@ async def simulate(req: SimulateRequest):
 
     # Si solicita generar un caso nuevo, construimos una instrucción clara para el prompt
     if req.generate:
+        if req.case_length == "extenso":
+            logger.info("Solicitud de caso extenso rechazada: generacion temporalmente pausada")
+            raise HTTPException(
+                status_code=503,
+                detail="Los casos extensos están temporalmente deshabilitados. Selecciona corto o medio.",
+            )
         start_time = time.time()
         
         theme = req.theme or "temas de trabajo social general"
@@ -458,11 +466,11 @@ Devuelve SOLO JSON válido (sin markdown) con este esquema exacto:
             "question": "string",
             "options": [],
             "correct_index": null,
-            "justification": "string"
+            "justification": ""
         }
     ],
     "suggested_questions": ["string"],
-    "suggested_interventions": ["string"]
+    "suggested_interventions": []
 }
 
 Reglas:
@@ -470,6 +478,8 @@ Reglas:
 - Todas las preguntas deben ser abiertas.
 - Usa siempre options = [] y correct_index = null.
 - Asegura coherencia entre relato, objetivos y preguntas.
+- No entregues respuestas modelo, pistas de solución ni planes de intervención.
+- Deja justification vacío y suggested_interventions = []; el docente media las dudas.
 - No agregues texto fuera del JSON.
 """
         
