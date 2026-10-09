@@ -95,7 +95,7 @@ npm ci
 npm test
 GITHUB_PAGES=true PAGES_BASE_PATH=/simts/ \
   VITE_API_URL=https://simts.onrender.com npm run build
-npm run preview
+PAGES_BASE_PATH=/simts/ npm run preview
 ```
 
 En preview abre `http://localhost:5173/simts/`.
